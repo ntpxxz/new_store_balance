@@ -197,7 +197,6 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
 function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
   invoiceNo: string; onConfirm: () => void; onCancel: () => void;
 }) {
-  const barcode = `INV-${invoiceNo.replace(/\//g, "")}`;
   const corners = ["top-4 left-4 border-t-2 border-l-2", "top-4 right-4 border-t-2 border-r-2",
     "bottom-4 left-4 border-b-2 border-l-2", "bottom-4 right-4 border-b-2 border-r-2"];
   const [scanning, setScanning] = useState(false);
@@ -243,7 +242,7 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
         return;
       }
       const norm = (s: string) => s.replace(/[-\/\s]/g, "").toUpperCase();
-      if (decoded === invoiceNo || decoded === barcode || norm(decoded) === norm(invoiceNo)) {
+      if (decoded === invoiceNo || norm(decoded) === norm(invoiceNo)) {
         setResult({ ok: true });
       } else {
         setRetries(n => n + 1);
@@ -341,7 +340,7 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
               <>
                 <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--ok-fg)" }}><Check /></div>
                 <div className="font-bold text-lg" style={{ color: "var(--ok-fg)" }}>Scan Successful</div>
-                <div className="text-sm mt-2 mb-5" style={{ color: "var(--muted)" }}>Barcode: {barcode}</div>
+                <div className="text-sm mt-2 mb-5" style={{ color: "var(--muted)" }}>Tax Invoice: {invoiceNo}</div>
                 <button className="btn w-full mb-2" style={{ background: "#16a34a", color: "#fff" }} onClick={onConfirm}>Confirm</button>
                 <button className="btn btn-ghost w-full" onClick={() => setResult(null)}>Scan again</button>
               </>

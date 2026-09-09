@@ -5,9 +5,7 @@ import { logger, captureException } from '@/lib/logger';
 import pbassClient from '@/lib/pbass';
 
 // Pull the invoice list from PBASS and upsert into inbound_tasks.
-// Writes mirror the store-smt oneinv webhook (unique key invoiceNo_partNo_vendor,
-// create rows as PENDING). The READ side is the uncertain part: PBASS record key
-// names are not documented here, so we pick tolerantly across common variants.
+// Unique key: TAX_INV_NO + ITEM_NO + VENDOR_CODE — these three fields must be stable across PBASS updates.
 // ponytail: verify the mapping with ?dryRun=1 against real PBASS output before trusting writes.
 
 const pick = (row: any, keys: string[]): any => {
@@ -18,9 +16,9 @@ const pick = (row: any, keys: string[]): any => {
 };
 
 function mapRow(row: any) {
-  const invoiceNo = pick(row, ['INVOICE_NO', 'MATLOT', 'invoiceNo', 'INV_NO', 'invoice', 'id']);
+  const invoiceNo = pick(row, ['TAX_INV_NO', 'INVOICE_NO', 'MATLOT', 'invoiceNo', 'INV_NO', 'invoice', 'id']);
   const partNo = pick(row, ['ITEM_NO', 'partNo', 'PART_NO', 'sku']);
-  const vendor = pick(row, ['VENDOR_NAME', 'vendor', 'VENDOR', 'VENDOR_CODE']);
+  const vendor = pick(row, ['VENDOR_CODE', 'VENDOR_NAME', 'vendor', 'VENDOR']);
   const qtyRaw = pick(row, ['DELIVERY_QUANTITY', 'STOCK_QTY', 'planQty', 'PLAN_QTY', 'qty', 'QTY']);
   const planQty = qtyRaw != null ? parseFloat(String(qtyRaw)) : NaN;
   const poNo = pick(row, ['PONO', 'PO_NO', 'poNo', 'po']);
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ponytail: count distinct keys before loop — source dupes collapse via upsert, explaining fetched vs dbCount gap
-    const sourceKeys = new Set(valid.map(m => `${m.invoiceNo}|${m.partNo}|${m.vendor}`));
+    const sourceKeys = new Set(valid.map(m => `${m.invoiceNo}|${m.partNo}|${m.vendor}`)); // TAX_INV_NO|ITEM_NO|VENDOR_CODE
     const sourceDuplicates = valid.length - sourceKeys.size;
 
     let upserted = 0;
