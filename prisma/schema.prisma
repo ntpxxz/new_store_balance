@@ -1,0 +1,445 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String             @id @default(uuid())
+  username             String             @unique
+  password             String
+  email                String?
+  role                 String             @default("USER")
+  section              String             @default("IQC")
+  isActive             Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  assignedInboundTasks InboundTask[]      @relation("AssignedUser")
+  notifications        Notification[]
+  sessions             Session[]
+  pushSubscriptions    PushSubscription[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String
+  title     String
+  message   String?
+  data      String?  @db.NVarChar(Max)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Supplier {
+  id          String          @id @default(uuid())
+  code        String          @unique
+  name        String
+  abbr        String?         // AS400 ABBR short name
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  taxId       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  poList      PurchaseOrder[]
+  parts       Part[]          @relation("PartSupplier")
+
+  @@map("suppliers")
+}
+
+model Part {
+  id            String              @id @default(uuid())
+  partNo        String              @unique
+  name          String?
+  spec          String?
+  drawingNo     String?
+  unit          String              @default("PCS")
+  safetyStock   Float               @default(0)
+  icon          String?
+  imageUrl      String?
+  // AS400 / PBASS master fields
+  plac          String?             // PLAC (plant code, e.g. T2)
+  division      String?             // DIVISION (e.g. T271DM)
+  divisionName  String?             // DIVISION_NAME (e.g. SPINDLE MOTOR)
+  itemType      String?             // ITEM_TYPE (e.g. P = purchased)
+  dept          String?             // DEPT
+  acCode        String?             // AC_CODE
+  // Carton packing quantity (pcs/box)
+  standardPackingQty Float?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  bomItems      BOMItem[]
+  inboundTasks  InboundTask[]
+  movements     Movement[]
+  stocks        Stock[]
+  outboundTasks OutboundTask[]
+  poItems       PurchaseOrderItem[]
+  stockLots     StockLot[]
+  suppliers     Supplier[]          @relation("PartSupplier")
+  cartonMaster  CartonMaster?
+
+  @@index([partNo])
+  @@map("master_parts")
+}
+
+model CartonMaster {
+  id          String   @id @default(uuid())
+  partNo      String   @unique
+  packingQty  Float
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  part        Part     @relation(fields: [partNo], references: [partNo])
+
+  @@map("carton_master")
+}
+
+model Stock {
+  id                  String   @id @default(uuid())
+  partId              String
+  location            String   // physical bin (auto-binned or raw AS400 location)
+  wh                  String?  // WH (warehouse, e.g. L)
+  as400Location       String?  // LOCATION from AS400 (e.g. S1)
+  stcl                String?  // STCL (shelf/class within location, e.g. 1, 2)
+  matlot              String?  // MATLOT (material lot ID)
+  vendorLot           String?  // VENDOR_LOT
+  vendorCode          String?  // VENDOR_CODE
+  vendorName          String?  // VENDOR_NAME
+  maker               String?  // MAKER
+  stdPrice            Float?   // STD_PRICE
+  actPrice            Float?   // ACT_PRICE
+  stdAmount           Float?   // STD_AMOUNT
+  actAmount           Float?   // ACT_AMOUNT
+  localCur            String?  // LOCAL_CUR (currency)
+  lastStockIn         String?  // LAST_STOCK_IN_UPDATE
+  lastIssued          String?  // LAST_ISSUED_UPDATE
+  latestUpdateDate    String?  // LATEST_UPDATE_DATE
+  latestOperator      String?  // LATEST_UPDATE_OPERATOR
+  latestOperatorName  String?  // LATEST_UPDATE_OPERATOR_NAME
+  quantity            Float    @default(0)  // STOCK_QTY
+  updatedAt           DateTime @updatedAt
+  part                Part     @relation(fields: [partId], references: [id])
+
+  @@unique([partId, location, wh])
+  @@map("inventory_stocks")
+}
+
+model Movement {
+  id        String   @id @default(uuid())
+  partId    String
+  type      String
+  qty       Float
+  docRef    String?
+  createdAt DateTime @default(now())
+  location  String?
+  part      Part     @relation(fields: [partId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+model StockLot {
+  id           String   @id @default(uuid())
+  partId       String
+  location     String
+  lotNo        String?
+  invoiceNo    String?
+  receivedAt   DateTime @default(now())
+  originalQty  Float    @default(0)
+  remainingQty Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  part         Part     @relation(fields: [partId], references: [id])
+
+  @@index([partId, receivedAt])
+  @@index([partId, remainingQty])
+  @@map("stock_lots")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  type        String
+  label       String
+  description String
+  details     String?  @db.NVarChar(Max)
+  createdAt   DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+model InboundTask {
+  id             String             @id @default(uuid())
+  status         String             @default("PENDING")
+  tagNo          String?            @unique
+  invoiceNo      String
+  poNo           String?
+  vendor         String
+  partId         String?
+  partNo         String
+  partName       String?
+  lotNo          String?
+  rev            String?
+  mfgDate        DateTime?
+  invoiceDate    DateTime?
+  planQty        Float
+  actualQty      Float              @default(0)
+  receivedBy     String?
+  receivedAt     DateTime?
+  receiverNote   String?
+  assignedTo     String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  targetLocation String?
+  dueDate        DateTime?
+  isUrgent       Boolean            @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  poItemId       String?
+  aql            String?
+  samplingType   String?
+  totalSampling  Int?
+  assignee       User?              @relation("AssignedUser", fields: [assignedTo], references: [id])
+  part           Part?              @relation(fields: [partId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  poItem         PurchaseOrderItem? @relation(fields: [poItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inspection     InspectionResult?
+  as400Queue AS400Queue[]
+
+  @@unique([invoiceNo, partNo, vendor])
+  @@index([tagNo])
+  @@index([invoiceNo])
+  @@index([status])
+  @@index([vendor])
+  @@map("inbound_tasks")
+}
+
+model OutboundTask {
+  id        String    @id @default(uuid())
+  status    String    @default("PENDING")
+  moNo      String
+  line      String?
+  partId    String?
+  partNo    String
+  bomItemId String?
+  planQty   Float
+  pickedQty Float     @default(0)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bomItem   BOMItem? @relation(fields: [bomItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  part      Part?    @relation(fields: [partId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("outbound_tasks")
+}
+
+model PurchaseOrder {
+  id         String              @id
+  supplierId String?
+  orderDate  DateTime?
+  dueDate    DateTime?
+  orderType  String?
+  currency   String?
+  vatRate    Float?
+  status     String              @default("OPEN")
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  items      PurchaseOrderItem[]
+  supplier   Supplier?           @relation(fields: [supplierId], references: [id])
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id           String        @id @default(cuid())
+  poId         String
+  partId       String
+  orderQty     Float
+  receivedQty  Float         @default(0)
+  unitPrice    Float?
+  totalAmount  Float?
+  inboundTasks InboundTask[]
+  part         Part          @relation(fields: [partId], references: [id])
+  po           PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  @@map("purchase_order_items")
+}
+
+model ProductionOrder {
+  id         String    @id
+  parentItem String
+  parentName String?
+  model      String?
+  planQty    Float
+  status     String    @default("OPEN")
+  line       String?
+  workCenter String?
+  startDate  DateTime?
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  bomItems   BOMItem[]
+
+  @@map("production_orders")
+}
+
+model MrList {
+  id         String    @id @default(cuid())
+  pickNo     String    @unique
+  moNo       String
+  itemNo     String?
+  itemName   String?
+  planQty    Float?
+  issueQty   Float?
+  balQty     Float?
+  unit       String?
+  statusName String?
+  schdDate   DateTime?
+  fgMo       String?
+  syncedAt   DateTime  @updatedAt
+
+  @@index([moNo])
+  @@index([itemNo])
+  @@map("mr_list")
+}
+
+model BOMItem {
+  id                String          @id @default(cuid())
+  productionOrderId String
+  partId            String
+  requiredQty       Float
+  pickedQty         Float           @default(0)
+  part              Part            @relation(fields: [partId], references: [id])
+  productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  outboundTasks     OutboundTask[]
+
+  @@map("bom_items")
+}
+
+model InspectionResult {
+  id            String      @id @default(uuid())
+  inboundTaskId String      @unique
+  passedQty     Float
+  failedQty     Float
+  judgment      String
+  defectReason  String?
+  remark        String?
+  inspector     String?
+  createdAt     DateTime    @default(now())
+  inboundTask   InboundTask @relation(fields: [inboundTaskId], references: [id])
+
+  @@map("inspection_results")
+}
+
+model invoice {
+  id            Int      @id @default(autoincrement())
+  po            String
+  vendor        String?
+  partNo        String
+  partName      String
+  invoice       String
+  invoiceDate   String?
+  receivedDate  String?
+  qty           Float
+  timestamp     String
+  createdAt     DateTime @default(now())
+  recordedBy    String?
+  iqcstatus     String   @default("Pending")
+  aql           String?
+  samplingType  String?
+  totalSampling Int?
+
+  @@map("invoices")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model SyncCheckpoint {
+  type       String    @id
+  lastSynced DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("sync_checkpoints")
+}
+
+model BinConfig {
+  id          String   @id @default(cuid())
+  location    String   @unique
+  isLocked    Boolean  @default(false)
+  maxCapacity Float    @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@map("bin_configs")
+}
+
+model SyncHistory {
+  id        String   @id @default(uuid())
+  type      String
+  imported  Int      @default(0)
+  success   Boolean  @default(true)
+  details   String?  @db.NVarChar(Max)
+  createdAt DateTime @default(now())
+
+  @@map("sync_history")
+}
+
+// ─── AS400 Write-back Queue ─────────────────────────────────────────────────
+
+model AS400Queue {
+  id            Int       @id @default(autoincrement())
+  vendorCode    String?   @map("VENDOR_CODE")
+  vendorName    String?   @map("VENDOR_NAME")
+  matLot        String?   @map("MATLOT")
+  itemNo        String?   @map("ITEM_NO")
+  stockQty      Decimal?  @map("STOCK_QTY")
+  itemType      String?   @map("ITEM_TYPE")
+  invDate       String?   @map("INV_DATE")
+  rcvDate       String?   @map("RCV_DATE")
+  rcvBy         String?   @map("RCV_BY")
+  inboundTaskId String?
+  status        String    @default("PENDING")
+  retryCount    Int       @default(0)
+  lastAttemptAt DateTime?
+  sentAt        DateTime?
+  as400RefNo    String?
+  error         String?   @db.NVarChar(Max)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  inboundTask   InboundTask? @relation(fields: [inboundTaskId], references: [id])
+
+  @@index([status])
+  @@index([matLot])
+  @@index([inboundTaskId])
+  @@map("as400_queue")
+}
