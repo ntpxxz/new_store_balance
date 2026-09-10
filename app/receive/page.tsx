@@ -25,9 +25,17 @@ export default function ReceiveListPage() {
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncInfo, setSyncInfo] = useState<{ dbCount: number; sourceDuplicates: number } | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   // keep latest search in ref so load() inside callbacks always sees current value
   const searchRef = useRef(search);
   searchRef.current = search;
+
+  const loadCounts = useCallback(async () => {
+    try {
+      const [a, b, c] = await Promise.all(TABS.map(t => api.listTasks(t.key)));
+      setCounts({ pending: a.length, iqc: b.length, completed: c.length });
+    } catch {}
+  }, []);
 
   const load = useCallback(async (currentTab = tab) => {
     setLoadState("loading");
@@ -50,6 +58,7 @@ export default function ReceiveListPage() {
       .finally(() => {
         setSyncing(false);
         load();
+        loadCounts();
       });
   }, [load]);
 
@@ -57,6 +66,7 @@ export default function ReceiveListPage() {
   useEffect(() => {
     if (!getToken()) { router.replace("/login"); return; }
     load(tab);
+    loadCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]); // intentional: search is manual (Enter), sync is manual button
 
@@ -76,7 +86,17 @@ export default function ReceiveListPage() {
             </div>
             <div className="seg lg:w-80">
               {TABS.map((t) => (
-                <button key={t.key} data-active={tab === t.key} onClick={() => setTab(t.key)}>{t.label}</button>
+                <button key={t.key} data-active={tab === t.key} onClick={() => setTab(t.key)}>
+                  {t.label}
+                  {counts[t.key] != null && (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
+                      style={{ minWidth: "1.25rem", height: "1.25rem", padding: "0 4px",
+                        background: tab === t.key ? "var(--accent)" : "var(--border)",
+                        color: tab === t.key ? "#fff" : "var(--muted)" }}>
+                      {counts[t.key]}
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
           </div>
