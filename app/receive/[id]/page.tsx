@@ -211,17 +211,22 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
   const MAX_RETRIES = 3;
 
   useEffect(() => {
+    // mediaDevices is undefined on plain HTTP (non-localhost) — requires HTTPS
+    if (!navigator.mediaDevices) {
+      setCamErr("Camera requires HTTPS — use manual entry below");
+      return;
+    }
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
       .then(stream => {
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
       })
-      .catch(() => setCamErr("Camera unavailable — use manual entry"));
+      .catch(() => setCamErr("Camera unavailable — use manual entry below"));
     return () => streamRef.current?.getTracks().forEach(t => t.stop());
   }, []);
 
   async function doScan() {
-    if (!("BarcodeDetector" in window)) { setManual(true); return; }
+    if (!navigator.mediaDevices || !("BarcodeDetector" in window)) { setManual(true); return; }
     setResult(null); setScanning(true);
     try {
       // ponytail: BarcodeDetector is native Chrome/Edge — no lib needed
