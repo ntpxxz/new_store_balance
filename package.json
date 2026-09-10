@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev -H 172.16.99.30 --experimental-https",
     "build": "prisma generate && next build",
-    "start": "next start -H 0.0.0.0",
+    "start": "next start -H 172.16.99.30",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -199,7 +199,6 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
 }) {
   const corners = ["top-4 left-4 border-t-2 border-l-2", "top-4 right-4 border-t-2 border-r-2",
     "bottom-4 left-4 border-b-2 border-l-2", "bottom-4 right-4 border-b-2 border-r-2"];
-  const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<{ ok: true } | { ok: false; reason: string } | null>(null);
   const [retries, setRetries] = useState(0);
   const [manual, setManual] = useState(false);
@@ -207,58 +206,45 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
   const [manualErr, setManualErr] = useState("");
   const [camErr, setCamErr] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const controlsRef = useRef<{ stop: () => void } | null>(null);
   const MAX_RETRIES = 3;
+  const norm = (s: string) => s.replace(/[-\/\s]/g, "").toUpperCase();
 
-  useEffect(() => {
-    // mediaDevices is undefined on plain HTTP (non-localhost) — requires HTTPS
-    if (!navigator.mediaDevices) {
-      setCamErr("Camera requires HTTPS — use manual entry below");
+  function stopReader() {
+    controlsRef.current?.stop();
+    controlsRef.current = null;
+  }
+
+  function startReader() {
+    if (!videoRef.current) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamErr("Camera requires HTTPS — use manual entry");
       return;
     }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => {
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      })
-      .catch(() => setCamErr("Camera unavailable — use manual entry below"));
-    return () => streamRef.current?.getTracks().forEach(t => t.stop());
-  }, []);
-
-  async function doScan() {
-    if (!navigator.mediaDevices || !("BarcodeDetector" in window)) { setManual(true); return; }
-    setResult(null); setScanning(true);
-    try {
-      // ponytail: BarcodeDetector is native Chrome/Edge — no lib needed
-      const detector = new (window as any).BarcodeDetector({
-        formats: ["qr_code", "code_128", "ean_13", "code_39", "data_matrix"],
+    import("@zxing/browser").then(({ BrowserMultiFormatReader }) => {
+      const reader = new BrowserMultiFormatReader();
+      reader.decodeFromVideoDevice(undefined, videoRef.current!, (res, err, controls) => {
+        if (!res) return; // NotFoundException fires on every empty frame — normal
+        controlsRef.current = controls;
+        stopReader();
+        const decoded = res.getText();
+        if (decoded === invoiceNo || norm(decoded) === norm(invoiceNo)) {
+          setResult({ ok: true });
+        } else {
+          setRetries(n => n + 1);
+          setResult({ ok: false, reason: `Scanned: "${decoded}" — expected: "${invoiceNo}"` });
+        }
+      }).then(controls => {
+        controlsRef.current = controls;
+      }).catch((e: any) => {
+        setCamErr(e?.message ?? "Camera unavailable — use manual entry");
       });
-      const video = videoRef.current;
-      if (!video) throw new Error("Camera not ready");
-      let decoded: string | null = null;
-      for (let i = 0; i < 10 && !decoded; i++) {
-        await new Promise(r => setTimeout(r, 150));
-        const hits = await detector.detect(video);
-        if (hits.length > 0) decoded = hits[0].rawValue;
-      }
-      if (!decoded) {
-        setRetries(n => n + 1);
-        setResult({ ok: false, reason: "No barcode detected. Hold steady and try again." });
-        return;
-      }
-      const norm = (s: string) => s.replace(/[-\/\s]/g, "").toUpperCase();
-      if (decoded === invoiceNo || norm(decoded) === norm(invoiceNo)) {
-        setResult({ ok: true });
-      } else {
-        setRetries(n => n + 1);
-        setResult({ ok: false, reason: `Scanned: ${decoded} — expected: ${invoiceNo}` });
-      }
-    } catch (e: any) {
-      setResult({ ok: false, reason: e?.message ?? "Camera error. Check permissions and try again." });
-    } finally {
-      setScanning(false);
-    }
+    }).catch(() => setCamErr("Scanner unavailable — use manual entry"));
   }
+
+  // start on mount, restart when result is dismissed (retry), stop on unmount
+  useEffect(() => { startReader(); return stopReader; }, []);
+  useEffect(() => { if (result === null && !manual && !camErr) startReader(); }, [result]);
 
   const tooManyRetries = retries >= MAX_RETRIES;
 
@@ -317,16 +303,25 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
               style={{ color: "var(--warn-fg)", background: "rgba(0,0,0,.75)" }}>{camErr}</p>
           )}
         </div>
-        <p className="text-center text-sm" style={{ color: "#9aa4b2" }}>Align invoice barcode within the frame to scan</p>
+        <p className="text-center text-sm" style={{ color: "#9aa4b2" }}>
+          {camErr ? camErr : "Point camera at the invoice barcode or QR code — scanning automatically"}
+        </p>
         {retries > 0 && !tooManyRetries && (
           <p className="text-center text-xs" style={{ color: "var(--warn-fg)" }}>
             {MAX_RETRIES - retries} attempt{MAX_RETRIES - retries !== 1 ? "s" : ""} remaining
           </p>
         )}
         <div className="flex gap-3 mt-auto">
-          <button className="btn btn-accent flex-1" onClick={doScan} disabled={scanning || tooManyRetries}>
-            <Barcode /> {scanning ? "Scanning…" : "Scan"}
-          </button>
+          {camErr || tooManyRetries ? (
+            <button className="btn btn-primary flex-1" onClick={() => { stopReader(); setManual(true); }}>
+              <Barcode /> Enter Manually
+            </button>
+          ) : (
+            <div className="flex-1 flex items-center justify-center gap-2 text-sm" style={{ color: "#9aa4b2" }}>
+              <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--accent)" }} />
+              Scanning…
+            </div>
+          )}
           <button className="btn btn-ghost flex-1" onClick={onCancel}>Cancel</button>
         </div>
         {tooManyRetries && (
@@ -361,7 +356,7 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
                   </>
                 ) : (
                   <>
-                    <button className="btn w-full mb-2" style={{ background: "#ef4444", color: "#fff" }} onClick={doScan}>Retry</button>
+                    <button className="btn w-full mb-2" style={{ background: "#ef4444", color: "#fff" }} onClick={() => setResult(null)}>Retry</button>
                     <button className="btn btn-ghost w-full mb-2" onClick={() => { setResult(null); setManual(true); }}>Enter Manually</button>
                     <button className="btn btn-ghost w-full" onClick={onCancel}>Cancel</button>
                   </>
