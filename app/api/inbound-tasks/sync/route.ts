@@ -16,14 +16,18 @@ const pick = (row: any, keys: string[]): any => {
 };
 
 function mapRow(row: any) {
-  const invoiceNo = pick(row, ['TAX_INV_NO', 'INVOICE_NO', 'MATLOT', 'invoiceNo', 'INV_NO', 'invoice', 'id']);
-  const partNo = pick(row, ['ITEM_NO', 'partNo', 'PART_NO', 'sku']);
-  const vendor = pick(row, ['VENDOR_CODE', 'VENDOR_NAME', 'vendor', 'VENDOR']);
-  const qtyRaw = pick(row, ['DELIVERY_QUANTITY', 'STOCK_QTY', 'planQty', 'PLAN_QTY', 'qty', 'QTY']);
-  const planQty = qtyRaw != null ? parseFloat(String(qtyRaw)) : NaN;
-  const poNo = pick(row, ['PONO', 'PO_NO', 'poNo', 'po']);
-  const partName = pick(row, ['ITEM_NAME', 'partName', 'PART_NAME', 'name']);
-  const lotNo = pick(row, ['LOTNO', 'LOT_NO', 'lotNo', 'lot']);
+  // TAX_INVOICE_NO = EPROIN field; TAX_INVOICE = INVINCOM field
+  const invoiceNo = pick(row, ['TAX_INVOICE_NO', 'TAX_INVOICE', 'INVOICE_NO', 'INV_NO', 'invoiceNo', 'invoice', 'id']);
+  const partNo    = pick(row, ['ITEM_NO', 'partNo', 'PART_NO', 'sku']);
+  // VENDOR_CODE = EPROIN; VENDOR = INVINCOM (numeric vendor code)
+  const vendor    = pick(row, ['VENDOR_CODE', 'VENDOR', 'VENDOR_NAME', 'vendor']);
+  // VELIVERY_QUANTITY = EPROIN typo; REPLY_QTY = INVINCOM
+  const qtyRaw    = pick(row, ['VELIVERY_QUANTITY', 'DELIVERY_QUANTITY', 'REPLY_QTY', 'STOCK_QTY', 'planQty', 'PLAN_QTY', 'qty', 'QTY']);
+  const planQty   = qtyRaw != null ? parseFloat(String(qtyRaw)) : NaN;
+  const poNo      = pick(row, ['PONO', 'PO_NO', 'poNo', 'po']);
+  const partName  = pick(row, ['ITEM_NAME', 'partName', 'PART_NAME', 'name']);
+  const lotNo     = pick(row, ['LOTNO', 'LOT_NO', 'lotNo', 'lot']);
+  // DELIVERY_DATE = EPROIN; INV_DATE = INVINCOM
   const invDateRaw = pick(row, ['DELIVERY_DATE', 'INV_DATE', 'invoiceDate', 'INVOICE_DATE']);
   const invoiceDate = invDateRaw ? new Date(invDateRaw) : undefined;
   return {
@@ -55,10 +59,12 @@ export async function POST(request: NextRequest) {
     if (!res.success) return createErrorResponse(res.error || 'PBASS fetch failed', 502);
 
     const rows = res.data || [];
-    // ponytail: filter by DELIVERY_DATE on our side — EPROIN URL uses path-based dates, query params are ignored
+    // ponytail: STATUS_DESC = EPROIN field; STATUS = INVINCOM field
     const waiting = rows.filter((r: any) => {
-      if (r.STATUS_DESC !== 'WAITING RECEIVE') return false;
-      const dd = r.DELIVERY_DATE ? new Date(r.DELIVERY_DATE) : null;
+      const status = r.STATUS_DESC || r.STATUS || '';
+      if (status !== 'WAITING RECEIVE') return false;
+      const rawDate = r.DELIVERY_DATE || r.INV_DATE || r.DUE_DATE;
+      const dd = rawDate ? new Date(rawDate) : null;
       if (!dd || isNaN(dd.getTime())) return true;
       return dd >= today && dd <= plus2End;
     });
