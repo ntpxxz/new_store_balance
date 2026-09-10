@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0",
     "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "bcryptjs": "^3.0.3",
     "https-proxy-agent": "^7.0.6",
     "jsonwebtoken": "^9.0.3",
