@@ -86,11 +86,10 @@ export default function ReceiveListPage() {
             </div>
             <div className="seg lg:w-80">
               {TABS.map((t) => (
-                <button key={t.key} data-active={tab === t.key} onClick={() => setTab(t.key)}
-                  className="flex items-center justify-between gap-2">
-                  <span>{t.label}</span>
+                <button key={t.key} data-active={tab === t.key} onClick={() => setTab(t.key)}>
+                  {t.label}
                   {counts[t.key] != null && (
-                    <span className="inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
                       style={{ minWidth: "1.25rem", height: "1.25rem", padding: "0 4px",
                         background: tab === t.key ? "var(--accent)" : "var(--border)",
                         color: tab === t.key ? "#fff" : "var(--muted)" }}>
