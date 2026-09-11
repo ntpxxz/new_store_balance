@@ -67,7 +67,7 @@ function Detail({ part }: { part: PartDetail }) {
             <div className="text-xs font-medium mt-1" style={{ color: "var(--muted)" }}>{part.unit} on hand</div>
             <div className="mt-2">
               <span className={`badge ${low ? "badge-bad" : "badge-ok"}`}>
-                {low ? "⚠ Below safety" : "✓ OK"} · min {part.safetyStock}
+                {low ? "Below safety" : "OK"} · min {part.safetyStock}
               </span>
             </div>
           </div>

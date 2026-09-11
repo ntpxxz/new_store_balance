@@ -108,7 +108,10 @@ export default function ReceiveListPage() {
               <input className="field pr-9" placeholder="Search invoice or vendor…"
                 value={search} onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && load()} />
-              <Search className="absolute right-3 top-2.5 text-lg" />
+              <button type="button" onClick={() => load()} aria-label="Search"
+                className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
+                <Search className="text-lg" />
+              </button>
             </div>
             <div className="seg lg:w-80">
               {TABS.map((t) => (
@@ -146,7 +149,9 @@ export default function ReceiveListPage() {
         <div className="mt-4">
           {loadState === "loading" && <Info>Loading…</Info>}
           {loadState === "error" && <Info bad>{error}</Info>}
-          {loadState === "ok" && tasks.length === 0 && <Info>No items in this tab.</Info>}
+          {loadState === "ok" && tasks.length === 0 && (
+            <Info>{tab === "pending" ? "No pending items — press ↻ sync to load invoices from PBASS." : "No items in this tab."}</Info>
+          )}
 
           {loadState === "ok" && tasks.length > 0 && (
             <>
@@ -171,7 +176,8 @@ export default function ReceiveListPage() {
                   </thead>
                   <tbody>
                     {tasks.map((t) => (
-                      <tr key={t.id} className="border-t" style={{ borderColor: "var(--border)" }}>
+                      <tr key={t.id} className="border-t hover:bg-[#f7f9fc] cursor-pointer" style={{ borderColor: "var(--border)" }}
+                        onClick={() => router.push(`/receive/${t.id}`)}>
                         <Td>
                           <Link href={`/receive/${t.id}`} className="flex items-center gap-2 font-semibold" style={{ color: "var(--primary)" }}>
                             <Db /> {t.invoiceNo}

@@ -57,7 +57,10 @@ export default function PartsPage() {
             <input className="field pr-9" placeholder="Search part no, name, division…"
               value={search} onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && load()} />
-            <Search className="absolute right-3 top-2.5 text-lg" />
+            <button type="button" onClick={load} aria-label="Search"
+              className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
+              <Search className="text-lg" />
+            </button>
           </div>
           {(syncing || syncInfo) && (
             <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
@@ -94,7 +97,7 @@ export default function PartsPage() {
                   <div className="text-xs" style={{ color: "var(--muted)" }}>
                     {p.divisionName && <span className="mr-3">{p.divisionName}</span>}
                     Safety: {p.safetyStock}
-                    {p.locations.length > 0 && <span className="ml-3">📍 {p.locations.join(", ")}</span>}
+                    {p.locations.length > 0 && <span className="ml-3">Loc: {p.locations.join(", ")}</span>}
                   </div>
                 </Link>
               ))}
@@ -111,7 +114,9 @@ export default function PartsPage() {
                 </thead>
                 <tbody>
                   {parts.map((p) => (
-                    <tr key={p.id} className="border-t" style={{ borderColor: "var(--border)" }}>
+                    <tr key={p.id} className="border-t hover:bg-[#f7f9fc] cursor-pointer" style={{ borderColor: "var(--border)" }}
+                      onClick={() => router.push(`/parts/${p.id}`)}>
+
                       <Td>
                         <Link href={`/parts/${p.id}`} className="font-semibold hover:underline" style={{ color: "var(--primary)" }}>{p.partNo}</Link>
                       </Td>
