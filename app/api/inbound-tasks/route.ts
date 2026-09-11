@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
                     in: ['PENDING', 'ARRIVED']
                 };
             } else if (upStatus === 'SAMPLING' || upStatus === 'IQC') {
-                // Awaiting IQC only — a passed result is "Done" in this app (put-away skipped)
                 where.status = {
                     in: ['IQC_WAITING', 'IQC_IN_PROGRESS']
                 };
@@ -52,6 +51,13 @@ export async function GET(request: NextRequest) {
                 });
             }
         }
+
+        // ponytail: hard filter — this app only handles RAMP, DIVERTOR, BASEPLATE parts
+        where.AND = [{ OR: [
+            { partName: { contains: 'RAMP' } },
+            { partName: { contains: 'DIVERTOR' } },
+            { partName: { contains: 'BASEPLATE' } },
+        ]}];
 
         const tasks = await prisma.inboundTask.findMany({
             where,
@@ -92,6 +98,13 @@ export async function POST(request: NextRequest) {
         }
         const v = validation.data;
         const planQty = v.planQty ?? v.qty!;
+
+        // ── Part filter guard ─────────────────────────────────────
+        const allowed = ['RAMP', 'DIVERTOR', 'BASEPLATE'];
+        const nameUp = (v.partName ?? '').toUpperCase();
+        if (!allowed.some(k => nameUp.includes(k))) {
+            return createErrorResponse(`Part "${v.partName}" is not handled by this system (allowed: ${allowed.join(', ')})`, 400);
+        }
 
         // ── Duplicate Invoice Guard ───────────────────────────────
         if (!v.allowDuplicate) {
