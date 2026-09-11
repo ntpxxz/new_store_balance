@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
 import { Search, Db, ChevronRight } from "@/app/components/icons";
-import InvoiceCard, { iqcResult, fmtDate } from "@/app/components/InvoiceCard";
+import InvoiceCard, { iqcResult, statusBadge, fmtDate } from "@/app/components/InvoiceCard";
 import { api, getToken, type Task } from "@/lib/client";
 
 export { iqcResult, fmtDate };
@@ -106,7 +106,12 @@ export default function ReceiveListPage() {
           <div className="lg:flex lg:items-center lg:justify-between gap-4 max-w-6xl mx-auto">
             <div className="relative lg:flex-1 lg:max-w-md mb-3 lg:mb-0">
               <input className="field pr-9" placeholder="Search invoice or vendor…"
-                value={search} onChange={(e) => setSearch(e.target.value)}
+                value={search}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSearch(v);
+                  if (v === "") { searchRef.current = ""; load(); }
+                }}
                 onKeyDown={(e) => e.key === "Enter" && load()} />
               <button type="button" onClick={() => load()} aria-label="Search"
                 className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
@@ -182,11 +187,13 @@ export default function ReceiveListPage() {
                           <Link href={`/receive/${t.id}`} className="flex items-center gap-2 font-semibold" style={{ color: "var(--primary)" }}>
                             <Db /> {t.invoiceNo}
                           </Link>
-                          {iqcResult(t) && <div className="mt-1"><span className={`badge ${iqcResult(t)!.cls}`}>{iqcResult(t)!.label}</span></div>}
+                          <div className="mt-1">
+                            <span className={`badge ${statusBadge(t).cls}`}>{statusBadge(t).label}</span>
+                          </div>
                         </Td>
-                        <Td>Part NO. {t.partNo}</Td>
+                        <Td>{t.partNo}</Td>
                         <Td style={{ color: "var(--primary)" }}>{t.vendor}</Td>
-                        <Td style={{ color: "var(--primary)" }}>PO NO:{t.poNo || "—"}</Td>
+                        <Td style={{ color: "var(--muted)" }}>{t.poNo || "—"}</Td>
                         <Td>{fmtDate(t.invoiceDate, t.createdAt)}</Td>
                         <Td className="text-right font-bold text-base" style={{ color: "var(--primary)" }}>{t.planQty}</Td>
                         <Td className="text-right pr-6">
