@@ -47,10 +47,14 @@ export async function POST(request: NextRequest) {
   if ('error' in authResult) return createErrorResponse(authResult.error, authResult.status);
 
   const dryRun = new URL(request.url).searchParams.get('dryRun') === '1';
+  const body = await request.json().catch(() => ({}));
 
   try {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const plus2End = new Date(today); plus2End.setDate(today.getDate() + 2); plus2End.setHours(23, 59, 59, 999);
+    const defaultEnd = new Date(today); defaultEnd.setDate(today.getDate() + 2); defaultEnd.setHours(23, 59, 59, 999);
+    const rangeStart = body.dateFrom ? new Date(body.dateFrom) : today;
+    const rangeEnd   = body.dateTo   ? (() => { const d = new Date(body.dateTo); d.setHours(23,59,59,999); return d; })() : defaultEnd;
+    const plus2End = rangeEnd; // alias kept for filter below
 
     const res = await pbassClient.fetchData({
       customUrl: process.env.PBASS_INVOICE_API_URL,
@@ -66,7 +70,7 @@ export async function POST(request: NextRequest) {
       const rawDate = r.DELIVERY_DATE || r.INV_DATE || r.DUE_DATE;
       const dd = rawDate ? new Date(rawDate) : null;
       if (!dd || isNaN(dd.getTime())) return true;
-      return dd >= today && dd <= plus2End;
+      return dd >= rangeStart && dd <= plus2End;
     });
     const mapped = waiting.map(mapRow);
     const valid = mapped.filter((m) => m.invoiceNo && m.partNo && !isNaN(m.planQty) && m.planQty > 0);

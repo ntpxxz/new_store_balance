@@ -25,15 +25,19 @@ export default function ReceiveListPage() {
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncInfo, setSyncInfo] = useState<{ dbCount: number; sourceDuplicates: number } | null>(null);
+  const syncAbortRef = useRef<AbortController | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const [syncFrom, setSyncFrom] = useState(todayStr);
+  const [syncTo, setSyncTo] = useState(todayStr);
   // keep latest search in ref so load() inside callbacks always sees current value
   const searchRef = useRef(search);
   searchRef.current = search;
 
   const loadCounts = useCallback(async () => {
     try {
-      const [a, b, c] = await Promise.all(TABS.map(t => api.listTasks(t.key)));
-      setCounts({ pending: a.length, iqc: b.length, completed: c.length });
+      const c = await api.getCounts();
+      setCounts(c);
     } catch {}
   }, []);
 
@@ -50,17 +54,24 @@ export default function ReceiveListPage() {
   }, [tab]);
 
   const handleSync = useCallback(() => {
+    const ctrl = new AbortController();
+    syncAbortRef.current = ctrl;
     setSyncing(true);
     setSyncInfo(null);
-    api.sync()
+    api.sync({ dateFrom: syncFrom, dateTo: syncTo, signal: ctrl.signal })
       .then((r) => setSyncInfo({ dbCount: r.dbCount, sourceDuplicates: r.sourceDuplicates }))
       .catch(() => {})
       .finally(() => {
+        syncAbortRef.current = null;
         setSyncing(false);
         load();
         loadCounts();
       });
-  }, [load]);
+  }, [load, syncFrom, syncTo]);
+
+  const handleCancelSync = useCallback(() => {
+    syncAbortRef.current?.abort();
+  }, []);
 
   // Auth once; on tab change auto-load list (no PBASS sync on browser refresh)
   useEffect(() => {
@@ -72,6 +83,21 @@ export default function ReceiveListPage() {
 
   return (
     <AppShell title="Receive" active="receive" onRefresh={() => load()} onSync={handleSync} syncBusy={syncing}>
+      {syncing && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4"
+          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}>
+          <div className="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin" />
+          <p className="text-white font-semibold text-lg tracking-wide">Syncing from PBASS…</p>
+          <p className="text-white/60 text-sm">
+            {syncFrom === syncTo ? syncFrom : `${syncFrom} — ${syncTo}`}
+          </p>
+          <button onClick={handleCancelSync}
+            className="mt-2 px-5 py-2 rounded-lg text-sm font-medium"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}>
+            Cancel
+          </button>
+        </div>
+      )}
       <div className="max-w-6xl mx-auto">
 
         {/* Sticky search + tabs bar */}
@@ -100,17 +126,19 @@ export default function ReceiveListPage() {
               ))}
             </div>
           </div>
-          {/* Sync result line — stays visible when scrolled */}
-          {(syncing || syncInfo) && (
+          {/* Sync date range */}
+          <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: "var(--muted)" }}>
+            <span>Sync range:</span>
+            <input type="date" className="field py-1 text-xs" style={{ width: "9rem" }} value={syncFrom} onChange={e => setSyncFrom(e.target.value)} />
+            <span>—</span>
+            <input type="date" className="field py-1 text-xs" style={{ width: "9rem" }} value={syncTo} onChange={e => setSyncTo(e.target.value)} />
+          </div>
+
+          {/* Sync result line */}
+          {syncInfo && !syncing && (
             <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
-              {syncing
-                ? "Syncing from PBASS…"
-                : syncInfo && (
-                  <>Found <strong>{syncInfo.dbCount}</strong> invoice(s) in DB
-                    {syncInfo.sourceDuplicates > 0 && <> · {syncInfo.sourceDuplicates} PBASS duplicate(s) merged</>}
-                  </>
-                )
-              }
+              Found <strong>{syncInfo.dbCount}</strong> invoice(s) in DB
+              {syncInfo.sourceDuplicates > 0 && <> · {syncInfo.sourceDuplicates} PBASS duplicate(s) merged</>}
             </p>
           )}
         </div>

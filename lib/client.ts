@@ -148,13 +148,25 @@ export type PartDetail = {
 };
 
 export const api = {
-  sync: () => req(`/api/inbound-tasks/sync`, { method: "POST" }) as Promise<{ fetched: number; upserted: number; skipped: number; sourceDuplicates: number; dbCount: number }>,
+  sync: (opts?: { dateFrom?: string; dateTo?: string; signal?: AbortSignal }) => {
+    const { signal, ...body } = opts ?? {};
+    return req(`/api/inbound-tasks/sync`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal }) as Promise<{ fetched: number; upserted: number; skipped: number; sourceDuplicates: number; dbCount: number }>;
+  },
   listTasks: (status: string, search?: string) =>
     req(`/api/inbound-tasks?status=${status}${search ? `&search=${encodeURIComponent(search)}` : ""}`) as Promise<Task[]>,
+  getTask: (id: string) => req(`/api/inbound-tasks/${id}`) as Promise<Task>,
+  getCounts: () => req(`/api/inbound-tasks/counts`) as Promise<Record<string, number>>,
   syncStock: () => req(`/api/parts/sync`, { method: "POST" }) as Promise<{ fetched: number; upsertedParts: number; upsertedStocks: number; errors: string[] }>,
   getPart: (id: string) => req(`/api/parts/${id}`) as Promise<PartDetail>,
   listParts: (search?: string) =>
     req(`/api/parts${search ? `?search=${encodeURIComponent(search)}` : ""}`) as Promise<Part[]>,
   receive: (id: string, body: { receivedQty: number; isUrgent?: boolean; note?: string; bin?: string; lotNo?: string }) =>
     req(`/api/inbound-tasks/${id}/receive`, { method: "POST", body: JSON.stringify(body) }),
+  listAs400Queue: () => req(`/api/as400/queue`) as Promise<{
+    id: number; vendorCode?: string | null; vendorName?: string | null;
+    matLot?: string | null; itemNo?: string | null; stockQty?: number | null;
+    screenshot?: string | null; createdAt: string; status: string;
+  }[]>,
+  confirmAs400: (id: number) => req(`/api/as400/queue/${id}/confirm`, { method: "POST" }),
+  rejectAs400: (id: number) => req(`/api/as400/queue/${id}/reject`, { method: "POST" }),
 };
