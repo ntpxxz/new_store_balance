@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
-import { Barcode, Check, ChevronLeft, X, Flask } from "@/app/components/icons";
+import { Barcode, Check, ChevronLeft, X, Flask, Monitor } from "@/app/components/icons";
 import InvoiceCard from "@/app/components/InvoiceCard";
 import { api, getToken, type Task } from "@/lib/client";
 
-type Stage = "receive" | "iqc" | "done" | "other";
+type Stage = "receive" | "as400_pending" | "iqc" | "done" | "other";
 function stageOf(status: string): Stage {
-  if (status === "PENDING" || status === "ARRIVED") return "receive";
+  if (status === "PENDING") return "receive";
+  if (status === "ARRIVED") return "as400_pending";
   if (status === "IQC_WAITING" || status === "IQC_IN_PROGRESS") return "iqc";
-  // Put-away is skipped in this app: a finished IQC result (pass or fail) is Done.
   if (status === "COMPLETED" || status === "REJECTED") return "done";
   return "other";
 }
@@ -23,15 +23,11 @@ export default function DetailPage() {
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState("");
 
-  // fetch all + find by id (no by-id GET endpoint). ponytail: add /[id] GET if the list grows large.
   const load = useCallback(async () => {
-    setState("loading");
     try {
-      const all = await api.listTasks("all");
-      const found = all.find((t) => t.id === id) || null;
+      const found = await api.getTask(id);
       setTask(found);
-      setState(found ? "ok" : "error");
-      if (!found) setError("Task not found");
+      setState("ok");
     } catch (e: any) {
       setError(e.message);
       setState("error");
@@ -40,10 +36,18 @@ export default function DetailPage() {
 
   useEffect(() => {
     if (!getToken()) { router.replace("/login"); return; }
+    setState("loading");
     load();
   }, [load, router]);
 
   const stage = task ? stageOf(task.status) : "other";
+
+  // Poll while waiting for AS400 RPA confirmation or IQC result
+  useEffect(() => {
+    if (stage !== "as400_pending" && stage !== "iqc") return;
+    const t = setInterval(load, 3000);
+    return () => clearInterval(t);
+  }, [stage, load]);
 
   return (
     <AppShell title="Invoice Detail" active="receive" showBack onRefresh={load}>
@@ -55,10 +59,11 @@ export default function DetailPage() {
           <>
             <InvoiceCard task={task} />
             <BreakdownTable task={task} />
-            {stage === "receive" && <ReceivePanel task={task} onDone={() => router.push("/receive")} />}
-            {stage === "iqc" && <WaitingIqc task={task} />}
-            {stage === "done" && <DonePanel task={task} />}
-            {stage === "other" && <Card><span className="badge badge-bad">{task.status}</span></Card>}
+            {stage === "receive"      && <ReceivePanel task={task} onDone={load} />}
+            {stage === "as400_pending" && <WaitingAs400Panel />}
+            {stage === "iqc"          && <WaitingIqc task={task} />}
+            {stage === "done"         && <DonePanel task={task} />}
+            {stage === "other"        && <Card><span className="badge badge-bad">{task.status}</span></Card>}
           </>
         )}
       </div>
@@ -72,7 +77,7 @@ function Card({ children, className = "" }: any) {
 
 function BreakdownTable({ task }: { task: Task }) {
   const received = task.actualQty ?? 0;
-  const status = task.actualQty == null ? ["badge-muted", "Pending"]
+  const status = task.actualQty == null || task.actualQty === 0 ? ["badge-muted", "Pending"]
     : received < task.planQty ? ["badge-warn", "Shortage"]
     : ["badge-ok", "Verified"];
   return (
@@ -103,6 +108,25 @@ function BreakdownTable({ task }: { task: Task }) {
   );
 }
 
+function WaitingAs400Panel() {
+  return (
+    <Card className="text-center">
+      <div className="text-3xl mb-3 flex justify-center animate-pulse" style={{ color: "var(--primary)" }}>
+        <Monitor />
+      </div>
+      <div className="font-bold">รอ RPA กรอกข้อมูลใน AS400</div>
+      <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+        ระบบกำลังส่งข้อมูลเข้า AS400 อัตโนมัติ — แจ้งเตือนจะโผล่ขึ้นมาเมื่อพร้อมให้ยืนยัน
+      </p>
+      <div className="mt-4 flex justify-center gap-1">
+        {[0,1,2].map(i => (
+          <span key={i} className="w-2 h-2 rounded-full animate-bounce" style={{ background: "var(--primary)", animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   const [urgent, setUrgent] = useState(!!task.isUrgent);
   const [urgentReason, setUrgentReason] = useState("");
@@ -121,7 +145,7 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
         ? `[URGENT] ${urgentReason}${note ? ` — ${note}` : ""}`
         : (note || undefined);
       await api.receive(task.id, { receivedQty: task.planQty, isUrgent: urgent, note: finalNote, bin: bin || undefined });
-      onDone();
+      onDone(); // reload task → status=ARRIVED → WaitingAs400Panel shows, AppShell modal polls
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   }
@@ -151,8 +175,8 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
             <Labeled label="Received Qty">
               <input className="field" value={task.planQty} readOnly />
             </Labeled>
-            <Labeled label="Bin (optional — put-away happens after IQC)">
-              <input className="field" placeholder="e.g. A-01" value={bin} onChange={(e) => setBin(e.target.value)} />
+            <Labeled label="Store Bin *">
+              <input className="field" placeholder="e.g. A-01" value={bin} onChange={(e) => setBin(e.target.value)} required />
             </Labeled>
           </div>
           <Labeled label="Note" className="mt-4">
@@ -185,7 +209,7 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
             </div>
           )}
           {err && <div className="badge badge-bad mt-4 w-full justify-center py-1.5">{err}</div>}
-          <button className="btn btn-primary w-full mt-5" onClick={confirm} disabled={busy}>
+          <button className="btn btn-primary w-full mt-5" onClick={confirm} disabled={busy || !bin.trim()}>
             {busy ? "Saving…" : "Confirm & Register Receipt"}
           </button>
         </Card>
@@ -244,7 +268,7 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
 
   // start on mount, restart when result is dismissed (retry), stop on unmount
   useEffect(() => { startReader(); return stopReader; }, []);
-  useEffect(() => { if (result === null && !manual && !camErr) startReader(); }, [result]);
+  useEffect(() => { if (result === null && !manual && !camErr) startReader(); }, [result, manual, camErr]);
 
   const tooManyRetries = retries >= MAX_RETRIES;
 

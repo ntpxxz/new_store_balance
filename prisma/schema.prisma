@@ -350,27 +350,6 @@ model InspectionResult {
   @@map("inspection_results")
 }
 
-model invoice {
-  id            Int      @id @default(autoincrement())
-  po            String
-  vendor        String?
-  partNo        String
-  partName      String
-  invoice       String
-  invoiceDate   String?
-  receivedDate  String?
-  qty           Float
-  timestamp     String
-  createdAt     DateTime @default(now())
-  recordedBy    String?
-  iqcstatus     String   @default("Pending")
-  aql           String?
-  samplingType  String?
-  totalSampling Int?
-
-  @@map("invoices")
-}
-
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
@@ -414,6 +393,13 @@ model SyncHistory {
   @@map("sync_history")
 }
 
+model VendorShortname {
+  vendorCode String @id @map("vendor_code")
+  shortname  String
+
+  @@map("vendor_shortname")
+}
+
 // ─── AS400 Write-back Queue ─────────────────────────────────────────────────
 
 model AS400Queue {
@@ -436,6 +422,7 @@ model AS400Queue {
   error         String?   @db.NVarChar(Max)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
+  screenshot    String?   @db.NVarChar(Max)
   inboundTask   InboundTask? @relation(fields: [inboundTaskId], references: [id])
 
   @@index([status])

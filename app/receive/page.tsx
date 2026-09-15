@@ -175,7 +175,7 @@ export default function ReceiveListPage() {
                 <table className="w-full text-sm">
                   <thead style={{ background: "#f7f9fc" }}>
                     <tr className="text-left" style={{ color: "var(--muted)" }}>
-                      <Th>Inbound ID</Th><Th>Part No.</Th><Th>Vendor Code</Th><Th>PO Number</Th>
+                      <Th>Inbound ID</Th><Th>Part No.</Th><Th>Part Name</Th><Th>Vendor Code</Th><Th>PO Number</Th>
                       <Th>Date</Th><Th className="text-right">Qty</Th><Th className="text-right pr-6">Actions</Th>
                     </tr>
                   </thead>
@@ -192,6 +192,7 @@ export default function ReceiveListPage() {
                           </div>
                         </Td>
                         <Td>{t.partNo}</Td>
+                        <Td style={{ color: "var(--muted)" }}>{t.partName || "—"}</Td>
                         <Td style={{ color: "var(--primary)" }}>{t.vendor}</Td>
                         <Td style={{ color: "var(--muted)" }}>{t.poNo || "—"}</Td>
                         <Td>{fmtDate(t.invoiceDate, t.createdAt)}</Td>

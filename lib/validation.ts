@@ -116,6 +116,10 @@ export const createInboundTaskSchema = z.object({
     { message: 'Planned quantity must be greater than 0', path: ['planQty'] }
 );
 
+// Formats a Date to YYYYMMDD string for AS400 fields
+export const fmtDateAS400 = (d: Date | null | undefined): string =>
+    d ? d.toISOString().slice(0, 10).replace(/-/g, '') : '';
+
 /**
  * Normalizes location strings to a standard format (e.g., "Aisle A, Bin 1" -> "A-01", "A-1" -> "A-01")
  */

@@ -1,7 +1,7 @@
 // Minimal inline icons (stroke=currentColor) — ponytail: no icon dependency.
-type P = { className?: string };
-const s = (d: string) => ({ className }: P) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width="1em" height="1em">
+type P = { className?: string; style?: React.CSSProperties };
+const s = (d: string) => ({ className, style }: P) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width="1em" height="1em">
     {d.split("|").map((p, i) => <path key={i} d={p} />)}
   </svg>
 );
@@ -20,3 +20,4 @@ export const Barcode = s("M4 6v12|M8 6v12|M11 6v12|M14 6v12|M17 6v12|M20 6v12");
 export const Check = s("M20 6L9 17l-5-5");
 export const X = s("M18 6L6 18|M6 6l12 12");
 export const Flask = s("M9 3h6|M10 3v6l-5 9a1 1 0 001 1h12a1 1 0 001-1l-5-9V3|M8 14h8");
+export const Monitor = s("M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z|M8 21h8|M12 17v4");

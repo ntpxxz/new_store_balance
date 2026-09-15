@@ -43,6 +43,7 @@ export default function InvoiceCard({ task, href, showViewDetail = false, classN
           <div className="mt-1.5 flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--primary)" }}>
             <Db /> {task.partNo}
           </div>
+          {task.partName && <div className="text-xs mt-0.5 truncate" style={{ color: "var(--muted)" }}>{task.partName}</div>}
         </div>
         <div className="text-right leading-none shrink-0">
           <div className="text-[11px] uppercase tracking-wide" style={{ color: "var(--muted)" }}>Qty</div>
