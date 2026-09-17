@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import { Barcode, Check, ChevronLeft, X, Flask, Monitor } from "@/app/components/icons";
 import InvoiceCard from "@/app/components/InvoiceCard";
-import { api, getToken, type Task } from "@/lib/client";
+import { api, getUser, type Task } from "@/lib/client";
+import { useAuthRedirect } from "@/lib/hooks";
 
 type Stage = "receive" | "as400_pending" | "iqc" | "done" | "other";
 function stageOf(status: string): Stage {
@@ -34,11 +35,11 @@ export default function DetailPage() {
     }
   }, [id]);
 
+  useAuthRedirect();
   useEffect(() => {
-    if (!getToken()) { router.replace("/login"); return; }
     setState("loading");
     load();
-  }, [load, router]);
+  }, [load]);
 
   const stage = task ? stageOf(task.status) : "other";
 
@@ -61,7 +62,7 @@ export default function DetailPage() {
             <BreakdownTable task={task} />
             {stage === "receive"      && <ReceivePanel task={task} onDone={load} />}
             {stage === "as400_pending" && <WaitingAs400Panel />}
-            {stage === "iqc"          && <WaitingIqc task={task} />}
+            {stage === "iqc"          && <IqcPanel task={task} onDone={load} />}
             {stage === "done"         && <DonePanel task={task} />}
             {stage === "other"        && <Card><span className="badge badge-bad">{task.status}</span></Card>}
           </>
@@ -394,14 +395,68 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
   );
 }
 
-function WaitingIqc({ task }: { task: Task }) {
+function IqcPanel({ task, onDone }: { task: Task; onDone: () => void }) {
+  const total = task.actualQty ?? 0;
+  const [passedQty, setPassedQty] = useState(String(total));
+  const [defectReason, setDefectReason] = useState("");
+  const [inspector, setInspector] = useState(getUser()?.username ?? "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const passed = Math.max(0, Math.min(Number(passedQty) || 0, total));
+  const failed = total - passed;
+
+  async function submit(judgment: "PASS" | "FAIL") {
+    setErr(""); setBusy(true);
+    try {
+      if (judgment === "PASS") {
+        await api.iqcPass(task.id, { passedQty: passed, failedQty: failed, inspector: inspector || undefined });
+      } else {
+        await api.iqcFail(task.id, { passedQty: passed, failedQty: failed, defectReason, inspector: inspector || undefined });
+      }
+      onDone();
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
   return (
-    <Card className="text-center">
-      <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--primary)" }}><Flask /></div>
-      <div className="font-bold">Waiting for IQC inspection</div>
-      <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-        Received {task.actualQty} pcs. The IQC system will confirm the result — no action needed here.
-      </p>
+    <Card>
+      <div className="flex items-center gap-2 mb-4 font-bold">
+        <Flask style={{ color: "var(--primary)" }} /> IQC Inspection
+      </div>
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Labeled label="Total Received">
+          <input className="field" value={total} readOnly />
+        </Labeled>
+        <Labeled label="Passed Qty">
+          <input className="field" type="number" min={0} max={total}
+            value={passedQty} onChange={(e) => setPassedQty(e.target.value)} />
+        </Labeled>
+        <Labeled label="Failed Qty">
+          <input className="field" value={failed} readOnly />
+        </Labeled>
+      </div>
+      <Labeled label="Defect Reason" className="mt-4">
+        <textarea className="field" rows={2} value={defectReason}
+          onChange={(e) => setDefectReason(e.target.value)}
+          placeholder="Required when failing" />
+      </Labeled>
+      <Labeled label="Inspector" className="mt-4">
+        <input className="field" value={inspector} onChange={(e) => setInspector(e.target.value)} />
+      </Labeled>
+      {err && <div className="badge badge-bad mt-4 w-full justify-center py-1.5">{err}</div>}
+      <div className="flex gap-3 mt-5">
+        <button className="btn flex-1 font-semibold" disabled={busy}
+          style={{ background: "#16a34a", color: "#fff" }}
+          onClick={() => submit("PASS")}>
+          {busy ? "…" : "Pass"}
+        </button>
+        <button className="btn flex-1 font-semibold" disabled={busy || !defectReason.trim()}
+          style={{ background: "#dc2626", color: "#fff" }}
+          onClick={() => submit("FAIL")}>
+          {busy ? "…" : "Fail"}
+        </button>
+      </div>
     </Card>
   );
 }

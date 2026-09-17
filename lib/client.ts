@@ -169,4 +169,8 @@ export const api = {
   }[]>,
   confirmAs400: (id: number) => req(`/api/as400/queue/${id}/confirm`, { method: "POST" }),
   rejectAs400: (id: number) => req(`/api/as400/queue/${id}/reject`, { method: "POST" }),
+  iqcPass: (id: string, body: { passedQty: number; failedQty?: number; inspector?: string; defectReason?: string; remark?: string }) =>
+    req(`/api/inbound-tasks/${id}/iqc-pass`, { method: "POST", body: JSON.stringify(body) }),
+  iqcFail: (id: string, body: { passedQty?: number; failedQty?: number; defectReason: string; inspector?: string; remark?: string }) =>
+    req(`/api/inbound-tasks/${id}/iqc-fail`, { method: "POST", body: JSON.stringify(body) }),
 };

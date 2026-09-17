@@ -1,22 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
 import { Search, ChevronRight } from "@/app/components/icons";
-import { api, getToken, type Part } from "@/lib/client";
+import { api, type Part } from "@/lib/client";
+import { useAuthRedirect, useSearchRef } from "@/lib/hooks";
+import { Th, Td, Info } from "@/app/components/table";
 
 export default function PartsPage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [search, setSearch, searchRef] = useSearchRef();
   const [parts, setParts] = useState<Part[]>([]);
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncInfo, setSyncInfo] = useState<{ upsertedParts: number; upsertedStocks: number } | null>(null);
-  const searchRef = useRef(search);
-  searchRef.current = search;
+  const [critOnly, setCritOnly] = useState(false);
 
   const load = useCallback(async () => {
     setLoadState("loading");
@@ -39,12 +40,10 @@ export default function PartsPage() {
       .finally(() => { setSyncing(false); load(); });
   }, [load]);
 
-  // Auth once + initial list load (no PBASS sync on browser refresh)
-  useEffect(() => {
-    if (!getToken()) { router.replace("/login"); return; }
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useAuthRedirect();
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const displayed = critOnly ? parts.filter(p => p.qty <= p.safetyStock) : parts;
 
   return (
     <AppShell title="Parts" active="parts" onRefresh={load} onSync={handleSync} syncBusy={syncing}>
@@ -53,14 +52,27 @@ export default function PartsPage() {
         {/* Sticky search bar */}
         <div className="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-3 pb-2 border-b mb-4"
           style={{ background: "var(--header)", borderColor: "var(--border)" }}>
-          <div className="relative max-w-md">
+          <div className="flex items-center gap-2 max-w-md">
+          <div className="relative flex-1">
             <input className="field pr-9" placeholder="Search part no, name, division…"
-              value={search} onChange={(e) => setSearch(e.target.value)}
+              value={search} onChange={(e) => {
+                const v = e.target.value;
+                setSearch(v);
+                if (v === "") { searchRef.current = ""; load(); }
+              }}
               onKeyDown={(e) => e.key === "Enter" && load()} />
             <button type="button" onClick={load} aria-label="Search"
               className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
               <Search className="text-lg" />
             </button>
+          </div>
+          <button type="button" onClick={() => setCritOnly(v => !v)}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+            style={critOnly
+              ? { background: "var(--bad-bg)", color: "var(--bad-fg)", borderColor: "var(--bad-fg)" }
+              : { color: "var(--muted)", borderColor: "var(--border)", background: "transparent" }}>
+            Critical only
+          </button>
           </div>
           {(syncing || syncInfo) && (
             <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
@@ -74,17 +86,19 @@ export default function PartsPage() {
 
         {loadState === "loading" && <Info>Loading…</Info>}
         {loadState === "error" && <Info bad>{error}</Info>}
-        {loadState === "ok" && parts.length === 0 && <Info>No parts found.</Info>}
+        {loadState === "ok" && displayed.length === 0 && (
+          <Info>{critOnly ? "No parts below safety stock." : "No parts found."}</Info>
+        )}
 
-        {loadState === "ok" && parts.length > 0 && (
+        {loadState === "ok" && displayed.length > 0 && (
           <>
             <p className="text-xs mb-3 font-medium" style={{ color: "var(--muted)" }}>
-              {parts.length} part{parts.length !== 1 ? "s" : ""}
+              {displayed.length} part{displayed.length !== 1 ? "s" : ""}{critOnly ? " below safety stock" : ""}
             </p>
 
             {/* Mobile cards */}
             <div className="lg:hidden flex flex-col gap-3">
-              {parts.map((p) => (
+              {displayed.map((p) => (
                 <Link key={p.id} href={`/parts/${p.id}`} className="card p-4 block">
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-semibold text-sm" style={{ color: "var(--primary)" }}>{p.partNo}</span>
@@ -113,7 +127,7 @@ export default function PartsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {parts.map((p) => (
+                  {displayed.map((p) => (
                     <tr key={p.id} className="border-t hover:bg-[#f7f9fc] cursor-pointer" style={{ borderColor: "var(--border)" }}
                       onClick={() => router.push(`/parts/${p.id}`)}>
 
@@ -146,8 +160,3 @@ export default function PartsPage() {
   );
 }
 
-const Th = ({ children, className = "" }: any) => <th className={`px-4 py-3 font-medium ${className}`}>{children}</th>;
-const Td = ({ children, className = "", style }: any) => <td className={`px-4 py-4 ${className}`} style={style}>{children}</td>;
-function Info({ children, bad }: { children: React.ReactNode; bad?: boolean }) {
-  return <div className="card p-8 text-center text-sm" style={{ color: bad ? "var(--bad-fg)" : "var(--muted)" }}>{children}</div>;
-}

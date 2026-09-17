@@ -14,9 +14,11 @@ export async function POST(
 ) {
     const { id: taskId } = await context.params;
 
-    if (IQC_API_KEY) {
-        const key = request.headers.get('x-api-key');
-        if (key !== IQC_API_KEY) return createErrorResponse('Unauthorized', 401);
+    // Accept API key (iqcsamp system) or JWT (UI users)
+    const hasApiKey = IQC_API_KEY && request.headers.get('x-api-key') === IQC_API_KEY;
+    if (!hasApiKey) {
+        const authResult = await verifyAuth(request);
+        if ('error' in authResult) return createErrorResponse('Unauthorized', 401);
     }
 
     try {

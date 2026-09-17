@@ -6,7 +6,9 @@ import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
 import { Search, Db, ChevronRight } from "@/app/components/icons";
 import InvoiceCard, { iqcResult, statusBadge, fmtDate } from "@/app/components/InvoiceCard";
-import { api, getToken, type Task } from "@/lib/client";
+import { api, type Task } from "@/lib/client";
+import { useAuthRedirect, useSearchRef } from "@/lib/hooks";
+import { Th, Td, Info } from "@/app/components/table";
 
 export { iqcResult, fmtDate };
 
@@ -19,7 +21,7 @@ const TABS = [
 export default function ReceiveListPage() {
   const router = useRouter();
   const [tab, setTab] = useState("pending");
-  const [search, setSearch] = useState("");
+  const [search, setSearch, searchRef] = useSearchRef();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [error, setError] = useState("");
@@ -30,9 +32,6 @@ export default function ReceiveListPage() {
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const [syncFrom, setSyncFrom] = useState(todayStr);
   const [syncTo, setSyncTo] = useState(todayStr);
-  // keep latest search in ref so load() inside callbacks always sees current value
-  const searchRef = useRef(search);
-  searchRef.current = search;
 
   const loadCounts = useCallback(async () => {
     try {
@@ -73,9 +72,9 @@ export default function ReceiveListPage() {
     syncAbortRef.current?.abort();
   }, []);
 
-  // Auth once; on tab change auto-load list (no PBASS sync on browser refresh)
+  useAuthRedirect();
+  // On tab change auto-load list (no PBASS sync on browser refresh)
   useEffect(() => {
-    if (!getToken()) { router.replace("/login"); return; }
     load(tab);
     loadCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -176,7 +175,7 @@ export default function ReceiveListPage() {
                   <thead style={{ background: "#f7f9fc" }}>
                     <tr className="text-left" style={{ color: "var(--muted)" }}>
                       <Th>Inbound ID</Th><Th>Part No.</Th><Th>Part Name</Th><Th>Vendor Code</Th><Th>PO Number</Th>
-                      <Th>Date</Th><Th className="text-right">Qty</Th><Th className="text-right pr-6">Actions</Th>
+                      <Th>{tab === "completed" ? "Invoice / Received" : "Date"}</Th><Th className="text-right">Qty</Th><Th className="text-right pr-6">Actions</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -195,7 +194,14 @@ export default function ReceiveListPage() {
                         <Td style={{ color: "var(--muted)" }}>{t.partName || "—"}</Td>
                         <Td style={{ color: "var(--primary)" }}>{t.vendor}</Td>
                         <Td style={{ color: "var(--muted)" }}>{t.poNo || "—"}</Td>
-                        <Td>{fmtDate(t.invoiceDate, t.createdAt)}</Td>
+                        <Td>
+                          <div>{fmtDate(t.invoiceDate, t.createdAt)}</div>
+                          {t.receivedAt && (
+                            <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                              Rcv: {fmtDate(t.receivedAt)}
+                            </div>
+                          )}
+                        </Td>
                         <Td className="text-right font-bold text-base" style={{ color: "var(--primary)" }}>{t.planQty}</Td>
                         <Td className="text-right pr-6">
                           <Link href={`/receive/${t.id}`} className="inline-flex items-center gap-1" style={{ color: "var(--muted)" }}>
@@ -215,8 +221,3 @@ export default function ReceiveListPage() {
   );
 }
 
-const Th = ({ children, className = "" }: any) => <th className={`px-4 py-3 font-medium ${className}`}>{children}</th>;
-const Td = ({ children, className = "", style }: any) => <td className={`px-4 py-4 ${className}`} style={style}>{children}</td>;
-function Info({ children, bad }: { children: React.ReactNode; bad?: boolean }) {
-  return <div className="card p-8 text-center text-sm" style={{ color: bad ? "var(--bad-fg)" : "var(--muted)" }}>{children}</div>;
-}

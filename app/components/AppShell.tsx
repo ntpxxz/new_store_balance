@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Download, Box, Upload, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
+import { Home, Download, Box, Flask, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
 import { api } from "@/lib/client";
 
 const NAV = [
   { key: "home", label: "Home", href: "/receive", Icon: Home },
   { key: "receive", label: "Receive", href: "/receive", Icon: Download },
   { key: "parts", label: "Parts", href: "/parts", Icon: Box },
-  { key: "issue", label: "Issue", href: "/receive", Icon: Upload },
+  { key: "iqc", label: "IQC", href: "/iqc", Icon: Flask },
 ];
 
 type QueueRow = {
