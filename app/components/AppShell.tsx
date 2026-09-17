@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Download, Box, Flask, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
+import { Home, Download, Box, Flask, List, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
 import { api } from "@/lib/client";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { key: "receive", label: "Receive", href: "/receive", Icon: Download },
   { key: "parts", label: "Parts", href: "/parts", Icon: Box },
   { key: "iqc", label: "IQC", href: "/iqc", Icon: Flask },
+  { key: "track", label: "Track", href: "/track", Icon: List },
 ];
 
 type QueueRow = {
