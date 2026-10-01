@@ -94,6 +94,8 @@ export async function POST(request: NextRequest) {
                 });
                 // ─────────────────────────────────────────────────────────────
 
+                const expiresAtCookie = new Date();
+                expiresAtCookie.setDate(expiresAtCookie.getDate() + 7);
                 const response = createResponse({
                     token,
                     user: {
@@ -104,6 +106,12 @@ export async function POST(request: NextRequest) {
                         role: user.role,
                         section: user.section
                     }
+                });
+                response.cookies.set('session', token, {
+                    httpOnly: true,
+                    path: '/',
+                    expires: expiresAtCookie,
+                    sameSite: 'lax',
                 });
                 return response;
             }

@@ -1,0 +1,235 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import AppShell from "@/app/components/AppShell";
+import { Search, Db, ChevronRight } from "@/app/components/icons";
+import InvoiceCard, { iqcResult, statusBadge, fmtDate } from "@/app/components/InvoiceCard";
+import { api, type Task } from "@/lib/client";
+import { useSearchRef } from "@/lib/hooks";
+import { Th, Td, Info } from "@/app/components/table";
+import { useLang } from "@/lib/lang";
+
+export { iqcResult, fmtDate };
+
+export default function ReceiveClient({
+  initialTasks,
+  initialCounts,
+}: {
+  initialTasks?: Task[];
+  initialCounts?: Record<string, number>;
+}) {
+  const router = useRouter();
+  const { t } = useLang();
+  const [tab, setTab] = useState("pending");
+  const [search, setSearch, searchRef] = useSearchRef();
+  const [tasks, setTasks] = useState<Task[]>(initialTasks ?? []);
+  const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error">(initialTasks ? "ok" : "idle");
+  const [error, setError] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncInfo, setSyncInfo] = useState<{ dbCount: number; sourceDuplicates: number } | null>(null);
+  const syncAbortRef = useRef<AbortController | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>(initialCounts ?? {});
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const [syncFrom, setSyncFrom] = useState(todayStr);
+  const [syncTo, setSyncTo] = useState(todayStr);
+
+  const TABS = [
+    { key: "pending", label: t.receive.tabPending },
+    { key: "iqc", label: t.receive.tabIqc },
+    { key: "completed", label: t.receive.tabDone },
+  ];
+
+  const loadCounts = useCallback(async () => {
+    try {
+      const c = await api.getCounts();
+      setCounts(c);
+    } catch {}
+  }, []);
+
+  const load = useCallback(async (currentTab = tab) => {
+    setLoadState("loading");
+    try {
+      const data = await api.listTasks(currentTab, searchRef.current.trim() || undefined);
+      setTasks(data);
+      setLoadState("ok");
+    } catch (e: any) {
+      setError(e.message);
+      setLoadState("error");
+    }
+  }, [tab]);
+
+  const handleSync = useCallback(() => {
+    const ctrl = new AbortController();
+    syncAbortRef.current = ctrl;
+    setSyncing(true);
+    setSyncInfo(null);
+    api.sync({ dateFrom: syncFrom, dateTo: syncTo, signal: ctrl.signal })
+      .then((r) => setSyncInfo({ dbCount: r.dbCount, sourceDuplicates: r.sourceDuplicates }))
+      .catch(() => {})
+      .finally(() => {
+        syncAbortRef.current = null;
+        setSyncing(false);
+        load();
+        loadCounts();
+      });
+  }, [load, syncFrom, syncTo]);
+
+  const handleCancelSync = useCallback(() => {
+    syncAbortRef.current?.abort();
+  }, []);
+
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (!didInit.current && initialTasks) {
+      didInit.current = true;
+      return; // server pre-fetched pending tab + counts
+    }
+    didInit.current = true;
+    load(tab);
+    loadCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  return (
+    <AppShell title={t.receive.title} active="receive" onRefresh={() => load()} onSync={handleSync} syncBusy={syncing}>
+      {syncing && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4"
+          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}>
+          <div className="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin" />
+          <p className="text-white font-semibold text-lg tracking-wide">{t.receive.syncing}</p>
+          <p className="text-white/60 text-sm">
+            {syncFrom === syncTo ? syncFrom : `${syncFrom} — ${syncTo}`}
+          </p>
+          <button onClick={handleCancelSync}
+            className="mt-2 px-5 py-2 rounded-lg text-sm font-medium"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}>
+            {t.common.cancel}
+          </button>
+        </div>
+      )}
+      <div className="max-w-6xl mx-auto">
+
+        {/* Sticky search + tabs bar */}
+        <div className="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-3 pb-2 border-b"
+          style={{ background: "var(--header)", borderColor: "var(--border)" }}>
+          <div className="lg:flex lg:items-center lg:justify-between gap-4 max-w-6xl mx-auto">
+            <div className="relative lg:flex-1 lg:max-w-md mb-3 lg:mb-0">
+              <input className="field pr-9" placeholder={t.receive.searchPh}
+                value={search}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSearch(v);
+                  if (v === "") { searchRef.current = ""; load(); }
+                }}
+                onKeyDown={(e) => e.key === "Enter" && load()} />
+              <button type="button" onClick={() => load()} aria-label={t.common.search}
+                className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
+                <Search className="text-lg" />
+              </button>
+            </div>
+            <div className="seg lg:w-80">
+              {TABS.map((tb) => (
+                <button key={tb.key} data-active={tab === tb.key} onClick={() => setTab(tb.key)}>
+                  {tb.label}
+                  {counts[tb.key] != null && (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold tabular-nums"
+                      style={{ minWidth: "1.25rem", height: "1.25rem", padding: "0 4px",
+                        background: tab === tb.key ? "var(--accent)" : "var(--border)",
+                        color: tab === tb.key ? "#fff" : "var(--muted)" }}>
+                      {counts[tb.key]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Sync date range */}
+          <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: "var(--muted)" }}>
+            <span>{t.receive.syncRange}</span>
+            <input type="date" className="field py-1 text-xs" style={{ width: "9rem" }} value={syncFrom} onChange={e => setSyncFrom(e.target.value)} />
+            <span>—</span>
+            <input type="date" className="field py-1 text-xs" style={{ width: "9rem" }} value={syncTo} onChange={e => setSyncTo(e.target.value)} />
+          </div>
+
+          {syncInfo && !syncing && (
+            <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
+              {t.receive.foundN(syncInfo.dbCount)}
+              {syncInfo.sourceDuplicates > 0 && <> · {syncInfo.sourceDuplicates} PBASS duplicate(s) merged</>}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4">
+          {loadState === "loading" && <Info>{t.common.loading}</Info>}
+          {loadState === "error" && <Info bad>{error}</Info>}
+          {loadState === "ok" && tasks.length === 0 && (
+            <Info>{tab === "pending" ? t.receive.noPending : t.receive.noItems}</Info>
+          )}
+
+          {loadState === "ok" && tasks.length > 0 && (
+            <>
+              <p className="text-xs mb-3 font-medium text-right" style={{ color: "var(--muted)" }}>
+                {t.common.items(tasks.length)}
+              </p>
+
+              {/* Mobile cards */}
+              <div className="lg:hidden flex flex-col gap-3">
+                {tasks.map((tk) => <InvoiceCard key={tk.id} task={tk} href={`/receive/${tk.id}`} showViewDetail />)}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden lg:block card overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead style={{ background: "var(--table-head)" }}>
+                    <tr className="text-left" style={{ color: "var(--muted)" }}>
+                      <Th>{t.receive.colId}</Th><Th>{t.receive.colPartNo}</Th><Th>{t.receive.colPartName}</Th>
+                      <Th>{t.receive.colVendor}</Th><Th>{t.receive.colPo}</Th>
+                      <Th>{tab === "completed" ? t.receive.colInvRcv : t.receive.colDate}</Th>
+                      <Th className="text-right">{t.receive.colQty}</Th>
+                      <Th className="text-right pr-6">{t.receive.colActions}</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map((tk) => (
+                      <tr key={tk.id} className="border-t hover:bg-[#f7f9fc] cursor-pointer" style={{ borderColor: "var(--border)" }}
+                        onClick={() => router.push(`/receive/${tk.id}`)}>
+                        <Td>
+                          <Link href={`/receive/${tk.id}`} className="flex items-center gap-2 font-semibold" style={{ color: "var(--primary)" }}>
+                            <Db /> {tk.invoiceNo}
+                          </Link>
+                          <div className="mt-1">
+                            <span className={`badge ${statusBadge(tk).cls}`}>{statusBadge(tk).label}</span>
+                          </div>
+                        </Td>
+                        <Td>{tk.partNo}</Td>
+                        <Td style={{ color: "var(--muted)" }}>{tk.partName || "—"}</Td>
+                        <Td style={{ color: "var(--primary)" }}>{tk.vendor}</Td>
+                        <Td style={{ color: "var(--muted)" }}>{tk.poNo || "—"}</Td>
+                        <Td>
+                          <div>{fmtDate(tk.invoiceDate, tk.createdAt)}</div>
+                          {tk.receivedAt && (
+                            <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                              {t.receive.rcv} {fmtDate(tk.receivedAt)}
+                            </div>
+                          )}
+                        </Td>
+                        <Td className="text-right font-bold text-base" style={{ color: "var(--primary)" }}>{tk.planQty}</Td>
+                        <Td className="text-right pr-6">
+                          <Link href={`/receive/${tk.id}`} className="inline-flex items-center gap-1" style={{ color: "var(--muted)" }}>
+                            {t.common.viewDetail} <ChevronRight />
+                          </Link>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </AppShell>
+  );
+}

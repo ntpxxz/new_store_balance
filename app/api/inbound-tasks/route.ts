@@ -16,8 +16,6 @@ export async function GET(request: NextRequest) {
         const statusStr = searchParams.get('status');
         const search = searchParams.get('search');
 
-        console.log(`[API] Fetching tasks. Status: ${statusStr}, Search: ${search}`);
-
         const where: any = {};
 
         if (statusStr && statusStr !== 'all') {
@@ -63,9 +61,8 @@ export async function GET(request: NextRequest) {
             where,
             include: { inspection: true },
             orderBy: { createdAt: 'desc' },
+            take: 300,
         });
-
-        console.log(`[API] Found ${tasks.length} tasks matching criteria.`);
 
         const mappedTasks = tasks.map((t: any) => ({
             ...t,

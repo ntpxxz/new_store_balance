@@ -43,7 +43,7 @@ export function getUser(): AuthUser | null {
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
-  location.href = "/login";
+  fetch('/api/auth/logout', { method: 'POST' }).finally(() => { location.href = '/login'; });
 }
 
 async function req(path: string, init: RequestInit = {}) {

@@ -14,12 +14,13 @@ export interface AuthUser {
 export async function verifyAuth(request: NextRequest): Promise<{ user: AuthUser } | { error: string; status: number }> {
     try {
         const authHeader = request.headers.get('authorization');
+        const token = authHeader?.startsWith('Bearer ')
+            ? authHeader.substring(7)
+            : request.cookies.get('session')?.value;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!token) {
             return { error: 'No authorization token provided', status: 401 };
         }
-
-        const token = authHeader.substring(7);
 
         // Verify JWT
         const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
