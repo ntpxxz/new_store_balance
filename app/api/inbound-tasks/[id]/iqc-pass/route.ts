@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { createResponse, createErrorResponse } from '@/lib/auth';
+import { verifyAuth, createResponse, createErrorResponse } from '@/lib/auth';
 import { logger, captureException } from '@/lib/logger';
 import { fmtDateAS400 } from '@/lib/validation';
 import { logActivity, ActivityType } from '@/lib/audit';
