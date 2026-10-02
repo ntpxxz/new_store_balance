@@ -30,7 +30,14 @@ export default function ReceiveClient({
   const [syncing, setSyncing] = useState(false);
   const [syncInfo, setSyncInfo] = useState<{ dbCount: number; sourceDuplicates: number } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncModal, setSyncModal] = useState(false);
   const syncAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!syncModal) return;
+    const id = setTimeout(() => setSyncModal(false), 5000);
+    return () => clearTimeout(id);
+  }, [syncModal]);
   const [counts, setCounts] = useState<Record<string, number>>(initialCounts ?? {});
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const [syncFrom, setSyncFrom] = useState(todayStr);
@@ -69,8 +76,8 @@ export default function ReceiveClient({
     setSyncInfo(null);
     setSyncError(null);
     api.sync({ dateFrom: syncFrom, dateTo: syncTo, signal: ctrl.signal })
-      .then((r) => setSyncInfo({ dbCount: r.dbCount, sourceDuplicates: r.sourceDuplicates }))
-      .catch((e: any) => { if (e?.name !== 'AbortError') setSyncError(e.message || 'Sync failed'); })
+      .then((r) => { setSyncInfo({ dbCount: r.dbCount, sourceDuplicates: r.sourceDuplicates }); setSyncModal(true); })
+      .catch((e: any) => { if (e?.name !== 'AbortError') { setSyncError(e.message || 'Sync failed'); setSyncModal(true); } })
       .finally(() => {
         syncAbortRef.current = null;
         setSyncing(false);
@@ -82,6 +89,13 @@ export default function ReceiveClient({
   const handleCancelSync = useCallback(() => {
     syncAbortRef.current?.abort();
   }, []);
+
+  // auto-navigate when QR scan resolves to exactly one task
+  useEffect(() => {
+    if (loadState === "ok" && tasks.length === 1 && /^DO\d+$/i.test(searchRef.current)) {
+      router.push(`/receive/${tasks[0].id}`);
+    }
+  }, [tasks, loadState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const didInit = useRef(false);
   useEffect(() => {
@@ -124,6 +138,15 @@ export default function ReceiveClient({
                   value={search}
                   onChange={(e) => {
                     const v = e.target.value;
+                    // ponytail: QR scans embed DO number in long text — extract and auto-search
+                    const doMatch = v.match(/DO\d+/i);
+                    if (doMatch && v.length > doMatch[0].length) {
+                      const doNo = doMatch[0].toUpperCase();
+                      searchRef.current = doNo;
+                      setSearch(doNo);
+                      load();
+                      return;
+                    }
                     setSearch(v);
                     if (v === "") { searchRef.current = ""; load(); }
                   }}
@@ -168,17 +191,6 @@ export default function ReceiveClient({
             </div>
           )}
 
-          {syncInfo && !syncing && (
-            <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
-              {t.receive.foundN(syncInfo.dbCount)}
-              {syncInfo.sourceDuplicates > 0 && <> · {syncInfo.sourceDuplicates} PBASS duplicate(s) merged</>}
-            </p>
-          )}
-          {syncError && !syncing && (
-            <p className="mt-1.5 text-xs" style={{ color: "var(--error, #dc2626)" }}>
-              Sync failed: {syncError}
-            </p>
-          )}
         </div>
 
         <div className="mt-4">
@@ -250,6 +262,47 @@ export default function ReceiveClient({
           )}
         </div>
       </div>
+      {/* ── Sync Result Modal ── */}
+      {syncModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={e => { if (e.target === e.currentTarget) setSyncModal(false); }}>
+          <div className="w-full max-w-sm rounded-xl shadow-2xl overflow-hidden"
+            style={{ background: "var(--card)" }}>
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
+              <span className="font-bold text-base">
+                {syncError ? t.common.syncFailed : t.common.syncDone}
+              </span>
+              <button onClick={() => setSyncModal(false)} aria-label="Close"
+                className="text-xl leading-none p-1" style={{ color: "var(--muted)" }}>×</button>
+            </div>
+            <div className="px-5 py-5 flex flex-col gap-3">
+              {syncError ? (
+                <p className="text-sm" style={{ color: "var(--error, #dc2626)" }}>{syncError}</p>
+              ) : syncInfo && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span style={{ color: "var(--muted)" }}>{t.receive.foundN(syncInfo.dbCount)}</span>
+                  </div>
+                  {syncInfo.sourceDuplicates > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span style={{ color: "var(--muted)" }}>Duplicates merged</span>
+                      <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.sourceDuplicates}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="px-5 pb-4">
+              <button onClick={() => setSyncModal(false)}
+                className="w-full py-2.5 rounded-lg font-semibold text-sm"
+                style={{ background: syncError ? "var(--error, #dc2626)" : "var(--primary)", color: "#fff" }}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

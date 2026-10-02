@@ -253,11 +253,14 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
         controlsRef.current = controls;
         stopReader();
         const decoded = res.getText();
-        if (decoded === invoiceNo || norm(decoded) === norm(invoiceNo)) {
+        // ponytail: QR embeds DO number in long text — extract it as the match key
+        const doMatch = decoded.match(/DO\d+/i);
+        const key = doMatch ? doMatch[0].toUpperCase() : decoded;
+        if (key === norm(invoiceNo)) {
           setResult({ ok: true });
         } else {
           setRetries(n => n + 1);
-          setResult({ ok: false, reason: `Scanned: "${decoded}" — expected: "${invoiceNo}"` });
+          setResult({ ok: false, reason: `Scanned: "${key}" — expected: "${invoiceNo}"` });
         }
       }).then(controls => {
         controlsRef.current = controls;
@@ -274,9 +277,10 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
   const tooManyRetries = retries >= MAX_RETRIES;
 
   function submitManual() {
-    const entered = manualValue.trim().toUpperCase();
-    const expected = invoiceNo.trim().toUpperCase();
-    if (entered !== expected) {
+    const raw = manualValue.trim();
+    const doMatch = raw.match(/DO\d+/i);
+    const entered = (doMatch ? doMatch[0] : raw).toUpperCase();
+    if (entered !== norm(invoiceNo)) {
       setManualErr(`Invoice number does not match. Expected: ${invoiceNo}`);
       return;
     }
