@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Download, Box, List, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
-import { api, getUser } from "@/lib/client";
+import { Home, Download, Box, List, Barcode, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
+import { api, getUser, logout } from "@/lib/client";
 import { useLang } from "@/lib/lang";
 import { useTheme } from "@/lib/theme";
 
@@ -81,10 +81,11 @@ export default function AppShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const NAV = [
-    { key: "home", label: t.nav.receive, href: "/receive", Icon: Home },
-    { key: "receive", label: t.nav.receive, href: "/receive", Icon: Download },
-    { key: "parts", label: t.nav.parts, href: "/parts", Icon: Box },
-{ key: "track", label: t.nav.track, href: "/track", Icon: List },
+    { key: "home",    label: t.nav.home,    href: "/",        Icon: Home },
+    { key: "receive", label: t.nav.receive,  href: "/receive", Icon: Download },
+    { key: "parts",   label: t.nav.parts,    href: "/parts",   Icon: Box },
+
+    { key: "bin",     label: t.nav.bin,      href: "/bin",     Icon: Barcode },
   ];
 
   // ── AS400 confirm modal ─────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ export default function AppShell({
               <ChevronLeft />
             </button>
           )}
-          <h1 className="flex-1 text-center lg:text-left text-base lg:text-xl font-bold truncate">{title}</h1>
+          <h1 className="flex-1 text-center text-base lg:text-xl font-bold truncate">{title}</h1>
 
           {queue.length > 0 && (
             <button onClick={() => setModalOpen(true)} title={t.as400.title}
@@ -220,6 +221,14 @@ export default function AppShell({
                     </span>
                     <button onClick={toggleTheme} className="text-sm p-1 rounded-md" style={{ color: "var(--muted)" }}>
                       {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                    </button>
+                  </div>
+                  {/* Logout */}
+                  <div className="border-t mt-1 pt-1" style={{ borderColor: "var(--border)" }}>
+                    <button onClick={logout}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium"
+                      style={{ color: "#dc2626" }}>
+                      {lang === "th" ? "ออกจากระบบ" : "Log out"}
                     </button>
                   </div>
                 </div>
