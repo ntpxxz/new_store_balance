@@ -10,12 +10,32 @@
   --primary-tint: #e6eefe;
   --accent: #12a6ff;
   --header: #e5edfb;
+  --table-head: #f7f9fc;
   --ok-bg: #dcfce7;
   --ok-fg: #15803d;
   --warn-bg: #fef3c7;
   --warn-fg: #b45309;
   --bad-bg: #fee2e2;
   --bad-fg: #b42318;
+}
+
+.dark {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --border: #2d3044;
+  --text: #e2e8f0;
+  --muted: #8892a4;
+  --primary: #60a5fa;
+  --primary-tint: #1e3a5f;
+  --accent: #38bdf8;
+  --header: #141720;
+  --table-head: #1e2235;
+  --ok-bg: #052e16;
+  --ok-fg: #4ade80;
+  --warn-bg: #2d1b00;
+  --warn-fg: #fbbf24;
+  --bad-bg: #2d0a0a;
+  --bad-fg: #f87171;
 }
 
 html, body { background: var(--bg); color: var(--text); }
@@ -57,3 +77,11 @@ body {
 .seg { @apply flex rounded-lg p-1 text-sm; background: #eef0f4; }
 .seg button { @apply flex-1 rounded-md py-1.5 font-medium; color: var(--muted); }
 .seg button[data-active="true"] { background: #fff; color: var(--primary); box-shadow: 0 1px 2px rgba(16,24,40,.08); }
+
+/* dark mode overrides for utility classes with hardcoded colors */
+.dark .btn-ghost { background: var(--card); }
+.dark .field { background: var(--card); color: var(--text); }
+.dark .seg { background: #1e2235; }
+.dark .seg button[data-active="true"] { background: var(--card); }
+.dark .badge-muted { background: #2d3044; color: var(--muted); }
+.dark .hover\:bg-\[\#f7f9fc\]:hover { background-color: var(--table-head) !important; }

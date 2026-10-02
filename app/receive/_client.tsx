@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
-import { Search, Db, ChevronRight } from "@/app/components/icons";
+import { Search, Db, ChevronRight, Filter } from "@/app/components/icons";
 import InvoiceCard, { iqcResult, statusBadge, fmtDate } from "@/app/components/InvoiceCard";
 import { api, type Task } from "@/lib/client";
 import { useSearchRef } from "@/lib/hooks";
@@ -29,11 +29,13 @@ export default function ReceiveClient({
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncInfo, setSyncInfo] = useState<{ dbCount: number; sourceDuplicates: number } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const syncAbortRef = useRef<AbortController | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>(initialCounts ?? {});
   const todayStr = () => new Date().toISOString().slice(0, 10);
   const [syncFrom, setSyncFrom] = useState(todayStr);
   const [syncTo, setSyncTo] = useState(todayStr);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const TABS = [
     { key: "pending", label: t.receive.tabPending },
@@ -65,9 +67,10 @@ export default function ReceiveClient({
     syncAbortRef.current = ctrl;
     setSyncing(true);
     setSyncInfo(null);
+    setSyncError(null);
     api.sync({ dateFrom: syncFrom, dateTo: syncTo, signal: ctrl.signal })
       .then((r) => setSyncInfo({ dbCount: r.dbCount, sourceDuplicates: r.sourceDuplicates }))
-      .catch(() => {})
+      .catch((e: any) => { if (e?.name !== 'AbortError') setSyncError(e.message || 'Sync failed'); })
       .finally(() => {
         syncAbortRef.current = null;
         setSyncing(false);
@@ -115,18 +118,30 @@ export default function ReceiveClient({
         <div className="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-3 pb-2 border-b"
           style={{ background: "var(--header)", borderColor: "var(--border)" }}>
           <div className="lg:flex lg:items-center lg:justify-between gap-4 max-w-6xl mx-auto">
-            <div className="relative lg:flex-1 lg:max-w-md mb-3 lg:mb-0">
-              <input className="field pr-9" placeholder={t.receive.searchPh}
-                value={search}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSearch(v);
-                  if (v === "") { searchRef.current = ""; load(); }
-                }}
-                onKeyDown={(e) => e.key === "Enter" && load()} />
-              <button type="button" onClick={() => load()} aria-label={t.common.search}
-                className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
-                <Search className="text-lg" />
+            <div className="flex items-center gap-2 lg:flex-1 lg:max-w-md mb-3 lg:mb-0">
+              <div className="relative flex-1">
+                <input className="field pr-9" placeholder={t.receive.searchPh}
+                  value={search}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSearch(v);
+                    if (v === "") { searchRef.current = ""; load(); }
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && load()} />
+                <button type="button" onClick={() => load()} aria-label={t.common.search}
+                  className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
+                  <Search className="text-lg" />
+                </button>
+              </div>
+              {/* Filter toggle */}
+              <button type="button" onClick={() => setFilterOpen(o => !o)} aria-label="Filter"
+                className="shrink-0 p-2 rounded-lg border"
+                style={{
+                  borderColor: filterOpen ? "var(--primary)" : "var(--border)",
+                  color: filterOpen ? "var(--primary)" : "var(--muted)",
+                  background: filterOpen ? "var(--primary-tint)" : "transparent",
+                }}>
+                <Filter className="text-lg" />
               </button>
             </div>
             <div className="seg lg:w-80">
@@ -145,18 +160,23 @@ export default function ReceiveClient({
               ))}
             </div>
           </div>
-          {/* Sync date range */}
-          <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: "var(--muted)" }}>
-            <span>{t.receive.syncRange}</span>
-            <input type="date" className="field py-1 text-xs" style={{ width: "9rem" }} value={syncFrom} onChange={e => setSyncFrom(e.target.value)} />
-            <span>—</span>
-            <input type="date" className="field py-1 text-xs" style={{ width: "9rem" }} value={syncTo} onChange={e => setSyncTo(e.target.value)} />
-          </div>
+          {filterOpen && (
+            <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: "var(--muted)" }}>
+<input type="date" className="field py-1 text-xs flex-1" value={syncFrom} onChange={e => setSyncFrom(e.target.value)} />
+              <span>—</span>
+              <input type="date" className="field py-1 text-xs flex-1" value={syncTo} onChange={e => setSyncTo(e.target.value)} />
+            </div>
+          )}
 
           {syncInfo && !syncing && (
             <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
               {t.receive.foundN(syncInfo.dbCount)}
               {syncInfo.sourceDuplicates > 0 && <> · {syncInfo.sourceDuplicates} PBASS duplicate(s) merged</>}
+            </p>
+          )}
+          {syncError && !syncing && (
+            <p className="mt-1.5 text-xs" style={{ color: "var(--error, #dc2626)" }}>
+              Sync failed: {syncError}
             </p>
           )}
         </div>

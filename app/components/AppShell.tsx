@@ -3,16 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Download, Box, Flask, List, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
-import { api } from "@/lib/client";
-
-const NAV = [
-  { key: "home", label: "Home", href: "/receive", Icon: Home },
-  { key: "receive", label: "Receive", href: "/receive", Icon: Download },
-  { key: "parts", label: "Parts", href: "/parts", Icon: Box },
-  { key: "iqc", label: "IQC", href: "/iqc", Icon: Flask },
-  { key: "track", label: "Track", href: "/track", Icon: List },
-];
+import { Home, Download, Box, List, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
+import { api, getUser } from "@/lib/client";
+import { useLang } from "@/lib/lang";
+import { useTheme } from "@/lib/theme";
 
 type QueueRow = {
   id: number;
@@ -38,6 +32,32 @@ function beep() {
   } catch {}
 }
 
+function SunIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  );
+}
+
+function AvatarIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="14" fill="var(--primary-tint)" />
+      <circle cx="14" cy="11" r="4" fill="var(--primary)" />
+      <path d="M5 24c0-4.418 4.03-8 9-8s9 3.582 9 8" fill="var(--primary)" />
+    </svg>
+  );
+}
+
 export default function AppShell({
   title,
   active = "receive",
@@ -56,6 +76,16 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { t, lang, setLang } = useLang();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const NAV = [
+    { key: "home", label: t.nav.receive, href: "/receive", Icon: Home },
+    { key: "receive", label: t.nav.receive, href: "/receive", Icon: Download },
+    { key: "parts", label: t.nav.parts, href: "/parts", Icon: Box },
+{ key: "track", label: t.nav.track, href: "/track", Icon: List },
+  ];
 
   // ── AS400 confirm modal ─────────────────────────────────────────────────────
   const [queue, setQueue] = useState<QueueRow[]>([]);
@@ -79,8 +109,8 @@ export default function AppShell({
 
   useEffect(() => {
     pollQueue();
-    const t = setInterval(pollQueue, 4000);
-    return () => clearInterval(t);
+    const timer = setInterval(pollQueue, 4000);
+    return () => clearInterval(timer);
   }, [pollQueue]);
 
   const current = queue[0] ?? null;
@@ -102,10 +132,11 @@ export default function AppShell({
   return (
     <div className="lg:flex min-h-screen">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r bg-white px-4 py-6" style={{ borderColor: "var(--border)" }}>
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r px-4 py-6"
+        style={{ borderColor: "var(--border)", background: "var(--card)" }}>
         <div className="px-2">
           <div className="text-lg font-extrabold tracking-tight">FORM INVENTORY</div>
-          <div className="text-xs" style={{ color: "var(--muted)" }}>Main Warehouse</div>
+          <div className="text-xs" style={{ color: "var(--muted)" }}>{t.nav.subtitle}</div>
         </div>
         <div className="my-4 h-px" style={{ background: "var(--border)" }} />
         <nav className="flex flex-col gap-1">
@@ -133,8 +164,9 @@ export default function AppShell({
             </button>
           )}
           <h1 className="flex-1 text-center lg:text-left text-base lg:text-xl font-bold truncate">{title}</h1>
+
           {queue.length > 0 && (
-            <button onClick={() => setModalOpen(true)} title="AS400 รอยืนยัน"
+            <button onClick={() => setModalOpen(true)} title={t.as400.title}
               className="relative text-lg p-1" style={{ color: "#dc2626" }}>
               <Monitor />
               <span className="absolute -top-0.5 -right-0.5 text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center"
@@ -144,7 +176,7 @@ export default function AppShell({
             </button>
           )}
           {onSync && (
-            <button onClick={onSync} disabled={syncBusy} aria-label="Sync" title="Sync from PBASS"
+            <button onClick={onSync} disabled={syncBusy} aria-label="Sync" title="Sync"
               className="text-lg p-1 disabled:opacity-40 transition-opacity" style={{ color: "var(--primary)" }}>
               <Sync className={syncBusy ? "animate-spin" : ""} />
             </button>
@@ -154,6 +186,46 @@ export default function AppShell({
               <Refresh />
             </button>
           )}
+
+          {/* Settings */}
+          <div className="relative">
+            <button onClick={() => setSettingsOpen(o => !o)} aria-label="Settings" className="p-0.5 rounded-full">
+              <AvatarIcon />
+            </button>
+            {settingsOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setSettingsOpen(false)} />
+                <div className="absolute right-0 top-full mt-2 z-40 w-52 rounded-xl shadow-lg border py-2"
+                  style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                  {/* User info */}
+                  <div className="px-4 py-2.5 border-b" style={{ borderColor: "var(--border)" }}>
+                    <div className="text-sm font-semibold truncate">{getUser()?.username ?? "—"}</div>
+                    <div className="text-xs" style={{ color: "var(--muted)" }}>{getUser()?.role ?? ""}</div>
+                  </div>
+                  {/* Language */}
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      {lang === "th" ? "ภาษา" : "Language"}
+                    </span>
+                    <button onClick={() => setLang(lang === "en" ? "th" : "en")}
+                      className="text-xs font-bold px-2.5 py-1 rounded-md border"
+                      style={{ borderColor: "var(--border)", color: "var(--primary)", background: "var(--primary-tint)" }}>
+                      {lang === "en" ? "TH" : "EN"}
+                    </button>
+                  </div>
+                  {/* Theme */}
+                  <div className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      {lang === "th" ? "ธีม" : "Theme"}
+                    </span>
+                    <button onClick={toggleTheme} className="text-sm p-1 rounded-md" style={{ color: "var(--muted)" }}>
+                      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
         {/* Content */}
@@ -161,8 +233,8 @@ export default function AppShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-10 flex border-t bg-white px-2 py-2"
-        style={{ borderColor: "var(--border)" }}>
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-10 flex border-t px-2 py-2"
+        style={{ borderColor: "var(--border)", background: "var(--card)" }}>
         {NAV.map(({ key, label, href, Icon }) => {
           const on = key === active;
           return (
@@ -186,15 +258,13 @@ export default function AppShell({
             {/* Modal header */}
             <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
               <div className="flex-1">
-                <div className="font-bold text-base">AS400 รอยืนยัน</div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                  RPA กรอกข้อมูลครบแล้ว — กรุณาตรวจสอบหน้าจอแล้วกดยืนยัน
-                </div>
+                <div className="font-bold text-base">{t.as400.title}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{t.as400.desc}</div>
               </div>
               {queue.length > 1 && (
                 <span className="text-xs px-2 py-1 rounded-full font-semibold"
                   style={{ background: "#fee2e2", color: "#dc2626" }}>
-                  {queue.length} รายการ
+                  {t.as400.items(queue.length)}
                 </span>
               )}
               <button onClick={() => setModalOpen(false)} aria-label="Close" className="text-xl leading-none p-1"
@@ -224,7 +294,7 @@ export default function AppShell({
                 </pre>
               ) : (
                 <div className="p-8 text-center text-sm" style={{ color: "var(--muted)" }}>
-                  รอหน้าจอ AS400…
+                  {t.as400.waiting}
                 </div>
               )}
             </div>
@@ -234,12 +304,12 @@ export default function AppShell({
               <button disabled={busy} onClick={() => act("confirm")}
                 className="flex-1 py-3 rounded-lg font-bold text-sm disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 style={{ background: "#16a34a", color: "#fff" }}>
-                {busy ? "…" : <><Check /> ยืนยัน (Enter)</>}
+                {busy ? "…" : <><Check /> {t.as400.confirm}</>}
               </button>
               <button disabled={busy} onClick={() => act("reject")}
                 className="flex-1 py-3 rounded-lg font-bold text-sm disabled:opacity-50 inline-flex items-center justify-center gap-2"
                 style={{ background: "#dc2626", color: "#fff" }}>
-                {busy ? "…" : <><X /> ยกเลิก (F3)</>}
+                {busy ? "…" : <><X /> {t.as400.cancel}</>}
               </button>
             </div>
 

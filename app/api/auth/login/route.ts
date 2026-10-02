@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { validateRequest, loginSchema } from '@/lib/validation';
 import { createResponse, createErrorResponse } from '@/lib/auth';
 import { isRateLimited, getClientIp } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
                             },
                         });
                     } catch (sessionError) {
-                        console.error('Session creation failed', sessionError);
+                        logger.error({ err: sessionError }, 'Session creation failed');
                     }
                 }
 
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     } catch (err) {
-        console.error('Auth Error:', err);
+        logger.error({ err }, 'Login error');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

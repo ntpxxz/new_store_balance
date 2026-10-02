@@ -22,3 +22,4 @@ export const X = s("M18 6L6 18|M6 6l12 12");
 export const Flask = s("M9 3h6|M10 3v6l-5 9a1 1 0 001 1h12a1 1 0 001-1l-5-9V3|M8 14h8");
 export const Monitor = s("M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z|M8 21h8|M12 17v4");
 export const List = s("M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01");
+export const Filter = s("M22 3H2l8 9.46V19l4 2V12.46L22 3");
