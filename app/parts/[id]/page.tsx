@@ -46,22 +46,19 @@ function Detail({ part }: { part: PartDetail }) {
     <>
       {/* Header */}
       <div className="card p-5 lg:p-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div className="rounded-2xl p-3.5 text-2xl shrink-0" style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>
-              <Box />
-            </div>
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--muted)" }}>
-                {part.divisionName ?? part.division ?? "—"}
-              </div>
-              <div className="text-2xl font-black tracking-tight leading-none" style={{ color: "var(--primary)" }}>{part.partNo}</div>
-              <div className="text-sm mt-1.5 leading-snug" style={{ color: "var(--muted)" }}>{part.name ?? "—"}</div>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="rounded-2xl p-3.5 text-2xl shrink-0" style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>
+            <Box />
           </div>
-
-          <div className="text-right shrink-0">
-            <div className="text-4xl font-black tabular-nums leading-none" style={{ color: low ? "var(--bad-fg)" : "var(--ok-fg)" }}>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-widest mb-0.5" style={{ color: "var(--muted)" }}>
+              {part.divisionName ?? part.division ?? "—"}
+            </div>
+            <div className="text-xl font-black tracking-tight leading-tight" style={{ color: "var(--primary)" }}>{part.partNo}</div>
+            <div className="text-sm mt-1 leading-snug truncate" style={{ color: "var(--muted)" }}>{part.name ?? "—"}</div>
+          </div>
+          <div className="text-right shrink-0 pl-4 border-l" style={{ borderColor: "var(--border)" }}>
+            <div className="text-3xl font-black tabular-nums leading-none" style={{ color: low ? "var(--bad-fg)" : "var(--ok-fg)" }}>
               {part.totalQty.toLocaleString()}
             </div>
             <div className="text-xs font-medium mt-1" style={{ color: "var(--muted)" }}>{part.unit} on hand</div>
