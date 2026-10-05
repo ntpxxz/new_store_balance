@@ -12,13 +12,15 @@ export async function GET(
 
     const task = await prisma.inboundTask.findUnique({
         where: { id },
-        include: { inspection: true },
+        include: { inspection: true, part: { select: { drawingNo: true, spec: true } } },
     });
 
     if (!task) return createErrorResponse('Task not found', 404);
 
     return createResponse({
         ...task,
+        itemDraw: task.part?.drawingNo ?? null,
+        itemSpec: task.part?.spec ?? null,
         passedQty: task.inspection?.passedQty ?? null,
         failedQty: task.inspection?.failedQty ?? null,
         judgment: task.inspection?.judgment ?? null,

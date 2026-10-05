@@ -25,6 +25,8 @@ export type Task = {
   targetLocation?: string | null;
   isUrgent?: boolean;
   lotNo?: string | null;
+  itemDraw?: string | null;
+  itemSpec?: string | null;
   passedQty?: number | null;
   failedQty?: number | null;
   judgment?: string | null;       // PASS | FAIL (from inspection_results)

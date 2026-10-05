@@ -59,13 +59,15 @@ export async function GET(request: NextRequest) {
 
         const tasks = await prisma.inboundTask.findMany({
             where,
-            include: { inspection: true },
+            include: { inspection: true, part: { select: { drawingNo: true, spec: true } } },
             orderBy: { createdAt: 'desc' },
             take: 300,
         });
 
         const mappedTasks = tasks.map((t: any) => ({
             ...t,
+            itemDraw: t.part?.drawingNo ?? null,
+            itemSpec: t.part?.spec ?? null,
             passedQty: t.inspection?.passedQty,
             failedQty: t.inspection?.failedQty,
             judgment: t.inspection?.judgment,
