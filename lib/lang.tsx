@@ -86,7 +86,7 @@ const T: Record<Lang, Translations> = {
       colLocation: "Location", colPartNo: "Part No.", colPartName: "Part Name",
       colVendor: "Vendor", colQty: "Qty", colUpdated: "Updated",
     },
-    card: { taxInv: "Tax Inv No.", vendor: "Vendor:", invoice: "Invoice" },
+    card: { taxInv: "DO No", vendor: "Vendor:", invoice: "Invoice" },
   },
   th: {
     nav: { home: "หน้าหลัก", receive: "รับสินค้า", parts: "ชิ้นส่วน", iqc: "IQC", track: "ติดตาม", bin: "Bin", subtitle: "คลังสินค้าหลัก" },
@@ -137,7 +137,7 @@ const T: Record<Lang, Translations> = {
       colLocation: "ตำแหน่ง", colPartNo: "รหัสชิ้นส่วน", colPartName: "ชื่อชิ้นส่วน",
       colVendor: "ผู้จัดจำหน่าย", colQty: "จำนวน", colUpdated: "อัปเดต",
     },
-    card: { taxInv: "เลขที่ใบกำกับภาษี", vendor: "ผู้จัดจำหน่าย:", invoice: "ใบแจ้งหนี้" },
+    card: { taxInv: "DO No", vendor: "ผู้จัดจำหน่าย:", invoice: "ใบแจ้งหนี้" },
   },
 };
 
