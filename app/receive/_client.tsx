@@ -139,7 +139,7 @@ export default function ReceiveClient({
                   onChange={(e) => {
                     const v = e.target.value;
                     // ponytail: QR scans embed DO number in long text — extract and auto-search
-                    const doMatch = v.match(/DO\d+/i);
+                    const doMatch = v.match(/D0{2,}\d+/i) || v.match(/DO\d+/i);
                     if (doMatch && v.length > doMatch[0].length) {
                       const doNo = doMatch[0].toUpperCase();
                       searchRef.current = doNo;
