@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
                     where.OR.push({ poNo: { contains: term } });
                     where.OR.push({ partNo: { contains: term } });
                     where.OR.push({ invoiceNo: { contains: term } });
+                    where.OR.push({ doNo: { contains: term } });
                     where.OR.push({ partName: { contains: term } });
                 });
             }
