@@ -9,9 +9,6 @@ import { useLang } from "@/lib/lang";
 
 // ponytail: edit this array to update announcements — no API needed
 const ANNOUNCEMENTS: { en: string; th: string; type?: "info" | "warn" }[] = [
-  { en: "Inventory count scheduled: 10 Oct 2026", th: "นับสต็อก: 10 ต.ค. 2569", type: "warn" },
-  { en: "New parts incoming: PCB Assembly (Lot #A2214)", th: "อะไหล่ใหม่เข้า: PCB Assembly (Lot #A2214)", type: "info" },
-  { en: "System maintenance: 5 Oct 2026 00:00–02:00", th: "บำรุงรักษาระบบ: 5 ต.ค. 2569 00:00–02:00", type: "info" },
 ];
 
 type DashData = { pending: number; iqc: number; completed: number; totalParts: number; inStock: number; belowSafety: number };
