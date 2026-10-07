@@ -231,6 +231,7 @@ export default function ReceiveClient({
                           <Link href={`/receive/${tk.id}`} className="flex items-center gap-2 font-semibold" style={{ color: "var(--primary)" }}>
                             <Db /> {tk.invoiceNo}
                           </Link>
+                          {tk.doNo && <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>DO: {tk.doNo}</div>}
                           <div className="mt-1">
                             <span className={`badge ${statusBadge(tk).cls}`}>{statusBadge(tk).label}</span>
                           </div>

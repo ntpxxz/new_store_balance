@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/app/components/AppShell";
@@ -163,6 +163,7 @@ export default function TrackClient({ initialTasks }: { initialTasks?: Task[] })
                               style={{ color: "var(--primary)" }}>
                               <Db /> {tk.invoiceNo}
                             </Link>
+                            {tk.doNo && <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>DO: {tk.doNo}</div>}
                           </Td>
                           <Td>{tk.partNo}</Td>
                           <Td style={{ color: "var(--muted)" }}>{tk.partName || "—"}</Td>
