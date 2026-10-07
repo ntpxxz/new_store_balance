@@ -278,7 +278,10 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
 
   function submitManual() {
     const raw = manualValue.trim();
-    if (!norm(raw).includes(norm(doNo))) {
+    const firstField = raw.indexOf(',') > 0
+      ? raw.slice(0, raw.indexOf(',')).replace(/[{}]/g, '').trim()
+      : raw;
+    if (norm(firstField) !== norm(doNo)) {
       setManualErr(`Invoice number does not match. Expected: ${doNo}`);
       return;
     }
