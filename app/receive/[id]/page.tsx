@@ -154,7 +154,7 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   return (
     <>
       {scanning && (
-        <ScanOverlay invoiceNo={task.invoiceNo}
+        <ScanOverlay doNo={task.invoiceNo} itemDraw={task.itemDraw}
           onConfirm={() => { setScanned(true); setScanning(false); }}
           onCancel={() => setScanning(false)} />
       )}
@@ -219,8 +219,8 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   );
 }
 
-function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
-  invoiceNo: string; onConfirm: () => void; onCancel: () => void;
+function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
+  doNo: string; itemDraw?: string | null; onConfirm: () => void; onCancel: () => void;
 }) {
   const corners = ["top-4 left-4 border-t-2 border-l-2", "top-4 right-4 border-t-2 border-r-2",
     "bottom-4 left-4 border-b-2 border-l-2", "bottom-4 right-4 border-b-2 border-r-2"];
@@ -256,11 +256,11 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
         // ponytail: QR embeds DO number in long text — extract it as the match key
         const doMatch = decoded.match(/DO\d+/i);
         const key = doMatch ? doMatch[0].toUpperCase() : decoded;
-        if (key === norm(invoiceNo)) {
+        if (key === norm(doNo)) {
           setResult({ ok: true });
         } else {
           setRetries(n => n + 1);
-          setResult({ ok: false, reason: `Scanned: "${key}" — expected: "${invoiceNo}"` });
+          setResult({ ok: false, reason: `Scanned: "${key}" — expected: "${doNo}"` });
         }
       }).then(controls => {
         controlsRef.current = controls;
@@ -280,8 +280,8 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
     const raw = manualValue.trim();
     const doMatch = raw.match(/DO\d+/i);
     const entered = (doMatch ? doMatch[0] : raw).toUpperCase();
-    if (entered !== norm(invoiceNo)) {
-      setManualErr(`Invoice number does not match. Expected: ${invoiceNo}`);
+    if (entered !== norm(doNo)) {
+      setManualErr(`DO number does not match. Expected: ${doNo}`);
       return;
     }
     onConfirm();
@@ -296,10 +296,10 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
           <span className="w-6" />
         </div>
         <div className="flex-1 flex flex-col gap-4 px-4 py-8 max-w-md w-full mx-auto">
-          <p className="text-sm" style={{ color: "#9aa4b2" }}>Enter the invoice number exactly as printed on the document.</p>
+          <p className="text-sm" style={{ color: "#9aa4b2" }}>Enter the DO number exactly as printed on the document.</p>
           <input
             className="field"
-            placeholder={`e.g. ${invoiceNo}`}
+            placeholder={`e.g. ${doNo}`}
             value={manualValue}
             onChange={(e) => { setManualValue(e.target.value); setManualErr(""); }}
             onKeyDown={(e) => e.key === "Enter" && submitManual()}
@@ -369,7 +369,9 @@ function ScanOverlay({ invoiceNo, onConfirm, onCancel }: {
               <>
                 <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--ok-fg)" }}><Check /></div>
                 <div className="font-bold text-lg" style={{ color: "var(--ok-fg)" }}>Scan Successful</div>
-                <div className="text-sm mt-2 mb-5" style={{ color: "var(--muted)" }}>Tax Invoice: {invoiceNo}</div>
+                <div className="text-sm mt-2" style={{ color: "var(--muted)" }}>DO No: {doNo}</div>
+                {itemDraw && <div className="text-sm mb-5" style={{ color: "var(--muted)" }}>Drawing: {itemDraw}</div>}
+                {!itemDraw && <div className="mb-5" />}
                 <button className="btn w-full mb-2" style={{ background: "#16a34a", color: "#fff" }} onClick={onConfirm}>Confirm</button>
                 <button className="btn btn-ghost w-full" onClick={() => setResult(null)}>Scan again</button>
               </>
