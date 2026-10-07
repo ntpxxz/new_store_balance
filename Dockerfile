@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1
 FROM node:20-slim AS base
 
-# ── install deps ──────────────────────────────────────────────────────────────
+# ── install deps (skip postinstall — schema not present yet) ──────────────────
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # ── build ─────────────────────────────────────────────────────────────────────
-FROM base AS builder
+FROM node:20 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -24,7 +24,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Prisma query engine binary lives here (custom output path)
