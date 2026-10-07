@@ -138,12 +138,12 @@ export default function ReceiveClient({
                   value={search}
                   onChange={(e) => {
                     const v = e.target.value;
-                    // ponytail: QR scans embed DO number in long text — extract and auto-search
-                    const doMatch = v.match(/D0{2,}\d+/i) || v.match(/DO\d+/i);
-                    if (doMatch && v.length > doMatch[0].length) {
-                      const doNo = doMatch[0].toUpperCase();
-                      searchRef.current = doNo;
-                      setSearch(doNo);
+                    // ponytail: QR format is {invoiceNo,date,partNo,...} — first field before comma
+                    const commaIdx = v.indexOf(',');
+                    if (commaIdx > 0) {
+                      const invoiceNo = v.slice(0, commaIdx).replace(/[{}]/g, '').trim();
+                      searchRef.current = invoiceNo;
+                      setSearch(invoiceNo);
                       load();
                       return;
                     }

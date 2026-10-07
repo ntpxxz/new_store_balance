@@ -253,7 +253,10 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
         controlsRef.current = controls;
         stopReader();
         const decoded = res.getText();
-        if (norm(decoded).includes(norm(doNo))) {
+        const firstField = decoded.indexOf(',') > 0
+          ? decoded.slice(0, decoded.indexOf(',')).replace(/[{}]/g, '').trim()
+          : decoded;
+        if (norm(firstField) === norm(doNo)) {
           setResult({ ok: true });
         } else {
           setRetries(n => n + 1);
