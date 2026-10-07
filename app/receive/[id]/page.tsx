@@ -253,14 +253,11 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
         controlsRef.current = controls;
         stopReader();
         const decoded = res.getText();
-        // ponytail: QR embeds DO number in long text — extract it as the match key
-        const doMatch = decoded.match(/DO\d+/i);
-        const key = doMatch ? doMatch[0].toUpperCase() : decoded;
-        if (key === norm(doNo)) {
+        if (norm(decoded).includes(norm(doNo))) {
           setResult({ ok: true });
         } else {
           setRetries(n => n + 1);
-          setResult({ ok: false, reason: `Scanned: "${key}" — expected: "${doNo}"` });
+          setResult({ ok: false, reason: `Scanned: "${decoded}" — expected: "${doNo}"` });
         }
       }).then(controls => {
         controlsRef.current = controls;
@@ -278,10 +275,8 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
 
   function submitManual() {
     const raw = manualValue.trim();
-    const doMatch = raw.match(/DO\d+/i);
-    const entered = (doMatch ? doMatch[0] : raw).toUpperCase();
-    if (entered !== norm(doNo)) {
-      setManualErr(`DO number does not match. Expected: ${doNo}`);
+    if (!norm(raw).includes(norm(doNo))) {
+      setManualErr(`Invoice number does not match. Expected: ${doNo}`);
       return;
     }
     onConfirm();
