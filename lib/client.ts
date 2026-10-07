@@ -12,6 +12,7 @@ export type Task = {
   id: string;
   status: string;
   invoiceNo: string;
+  doNo?: string | null;
   poNo?: string | null;
   vendor: string;
   partNo: string;

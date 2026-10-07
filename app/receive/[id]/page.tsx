@@ -154,7 +154,7 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   return (
     <>
       {scanning && (
-        <ScanOverlay doNo={task.invoiceNo} itemDraw={task.itemDraw}
+        <ScanOverlay doNo={task.doNo || task.invoiceNo} itemDraw={task.itemDraw}
           onConfirm={() => { setScanned(true); setScanning(false); }}
           onCancel={() => setScanning(false)} />
       )}

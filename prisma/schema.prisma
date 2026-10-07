@@ -194,6 +194,7 @@ model InboundTask {
   status         String             @default("PENDING")
   tagNo          String?            @unique
   invoiceNo      String
+  doNo           String?
   poNo           String?
   vendor         String
   partId         String?
