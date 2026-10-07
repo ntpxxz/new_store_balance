@@ -111,6 +111,7 @@ export default function TrackClient({ initialTasks }: { initialTasks?: Task[] })
                           <span className="font-semibold text-sm" style={{ color: "var(--primary)" }}>{tk.invoiceNo}</span>
                           <span className={`badge ${badge.cls}`}>{badge.label}</span>
                         </div>
+                        {tk.doNo && <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>DO: {tk.doNo}</div>}
                         <div className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                           {tk.partNo} · {tk.partName} · {tk.vendor}
                         </div>
