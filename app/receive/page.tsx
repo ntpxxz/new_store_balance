@@ -17,7 +17,7 @@ export default async function ReceivePage() {
   const [rows, pending, iqc, completed] = await Promise.all([
     prisma.inboundTask.findMany({
       where: { AND: [PART_FILTER], status: { in: ['PENDING', 'ARRIVED'] } },
-      include: { inspection: true },
+      include: { inspection: true, part: { select: { drawingNo: true, spec: true } } },
       orderBy: { createdAt: 'desc' },
       take: 300,
     }),
@@ -28,6 +28,8 @@ export default async function ReceivePage() {
 
   const tasks: Task[] = rows.map((t: any) => ({
     ...t,
+    itemDraw: t.part?.drawingNo ?? null,
+    itemSpec: t.part?.spec ?? null,
     passedQty: t.inspection?.passedQty,
     failedQty: t.inspection?.failedQty,
     judgment: t.inspection?.judgment,

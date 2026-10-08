@@ -29,13 +29,13 @@ function beep() {
     gain.gain.setValueAtTime(0.4, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
     osc.start(); osc.stop(ctx.currentTime + 0.5);
-  } catch {}
+  } catch { }
 }
 
 function SunIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   );
 }
@@ -43,7 +43,7 @@ function SunIcon() {
 function MoonIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );
 }
@@ -81,11 +81,11 @@ export default function AppShell({
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const NAV = [
-    { key: "home",    label: t.nav.home,    href: "/",        Icon: Home },
-    { key: "receive", label: t.nav.receive,  href: "/receive", Icon: Download },
-    { key: "parts",   label: t.nav.parts,    href: "/parts",   Icon: Box },
+    { key: "home", label: t.nav.home, href: "/", Icon: Home },
+    { key: "receive", label: t.nav.receive, href: "/receive", Icon: Download },
+    { key: "parts", label: t.nav.parts, href: "/parts", Icon: Box },
 
-    { key: "bin",     label: t.nav.bin,      href: "/bin",     Icon: Barcode },
+    { key: "bin", label: t.nav.bin, href: "/bin", Icon: Barcode },
   ];
 
   // ── AS400 confirm modal ─────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export default function AppShell({
       <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r px-4 py-6"
         style={{ borderColor: "var(--border)", background: "var(--card)" }}>
         <div className="px-2">
-          <div className="text-lg font-extrabold tracking-tight">FORM INVENTORY</div>
+          <div className="text-lg font-extrabold tracking-tight">SPD-STOREHOUSE</div>
           <div className="text-xs" style={{ color: "var(--muted)" }}>{t.nav.subtitle}</div>
         </div>
         <div className="my-4 h-px" style={{ background: "var(--border)" }} />
@@ -285,9 +285,9 @@ export default function AppShell({
               style={{ borderColor: "var(--border)", background: "var(--bg)" }}>
               {current.vendorCode && <Field label="Vendor" value={current.vendorCode} />}
               {current.vendorName && <Field label="Name" value={current.vendorName} />}
-              {current.matLot    && <Field label="Mat Lot" value={current.matLot} />}
-              {current.itemNo    && <Field label="Item" value={current.itemNo} />}
-              {current.stockQty  != null && <Field label="Qty" value={String(current.stockQty)} />}
+              {current.matLot && <Field label="Mat Lot" value={current.matLot} />}
+              {current.itemNo && <Field label="Item" value={current.itemNo} />}
+              {current.stockQty != null && <Field label="Qty" value={String(current.stockQty)} />}
             </div>
 
             {/* AS400 screen text */}

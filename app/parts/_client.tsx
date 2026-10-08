@@ -19,8 +19,6 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncInfo, setSyncInfo] = useState<{ upsertedParts: number; upsertedStocks: number } | null>(null);
-  const [critOnly, setCritOnly] = useState(false);
-
   const load = useCallback(async () => {
     setLoadState("loading");
     try {
@@ -33,11 +31,22 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
     }
   }, []);
 
+  const [syncModal, setSyncModal] = useState(false);
+
+  useEffect(() => {
+    if (!syncModal) return;
+    const id = setTimeout(() => setSyncModal(false), 5000);
+    return () => clearTimeout(id);
+  }, [syncModal]);
+
   const handleSync = useCallback(() => {
     setSyncing(true);
     setSyncInfo(null);
     api.syncStock()
-      .then((r) => setSyncInfo({ upsertedParts: r.upsertedParts, upsertedStocks: r.upsertedStocks }))
+      .then((r) => {
+        setSyncInfo({ upsertedParts: r.upsertedParts, upsertedStocks: r.upsertedStocks });
+        setSyncModal(true);
+      })
       .catch(() => {})
       .finally(() => { setSyncing(false); load(); });
   }, [load]);
@@ -46,7 +55,7 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
     if (!initialParts) load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const displayed = critOnly ? parts.filter(p => p.qty <= p.safetyStock) : parts;
+  const displayed = parts;
 
   return (
     <AppShell title={t.parts.title} active="parts" onRefresh={load} onSync={handleSync} syncBusy={syncing}>
@@ -55,48 +64,34 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
         {/* Sticky search bar */}
         <div className="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-3 pb-2 border-b mb-4"
           style={{ background: "var(--header)", borderColor: "var(--border)" }}>
-          <div className="flex items-center gap-2 max-w-md">
-            <div className="relative flex-1">
-              <input className="field pr-9" placeholder={t.parts.searchPh}
-                value={search} onChange={(e) => {
-                  const v = e.target.value;
-                  setSearch(v);
-                  if (v === "") { searchRef.current = ""; load(); }
-                }}
-                onKeyDown={(e) => e.key === "Enter" && load()} />
-              <button type="button" onClick={load} aria-label={t.common.search}
-                className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
-                <Search className="text-lg" />
-              </button>
-            </div>
-            <button type="button" onClick={() => setCritOnly(v => !v)}
-              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-              style={critOnly
-                ? { background: "var(--bad-bg)", color: "var(--bad-fg)", borderColor: "var(--bad-fg)" }
-                : { color: "var(--muted)", borderColor: "var(--border)", background: "transparent" }}>
-              {t.parts.criticalOnly}
+          <div className="relative flex-1 max-w-md">
+            <input className="field pr-9" placeholder={t.parts.searchPh}
+              value={search} onChange={(e) => {
+                const v = e.target.value;
+                setSearch(v);
+                if (v === "") { searchRef.current = ""; load(); }
+              }}
+              onKeyDown={(e) => e.key === "Enter" && load()} />
+            <button type="button" onClick={load} aria-label={t.common.search}
+              className="absolute right-2.5 top-2 p-0.5" style={{ color: "var(--muted)" }}>
+              <Search className="text-lg" />
             </button>
           </div>
-          {(syncing || syncInfo) && (
-            <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
-              {syncing
-                ? t.parts.syncing
-                : syncInfo && t.parts.synced(syncInfo.upsertedParts, syncInfo.upsertedStocks)
-              }
-            </p>
+          {syncing && (
+            <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>{t.parts.syncing}</p>
           )}
         </div>
 
         {loadState === "loading" && <Info>{t.common.loading}</Info>}
         {loadState === "error" && <Info bad>{error}</Info>}
         {loadState === "ok" && displayed.length === 0 && (
-          <Info>{critOnly ? t.parts.noCritical : t.parts.noFound}</Info>
+          <Info>{t.parts.noFound}</Info>
         )}
 
         {loadState === "ok" && displayed.length > 0 && (
           <>
             <p className="text-xs mb-3 font-medium" style={{ color: "var(--muted)" }}>
-              {t.parts.nParts(displayed.length)}{critOnly ? ` ${t.parts.belowSafety}` : ""}
+              {t.parts.nParts(displayed.length)}
             </p>
 
             {/* Mobile cards */}
@@ -159,6 +154,38 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
           </>
         )}
       </div>
+      {/* ── Sync Result Modal ── */}
+      {syncModal && syncInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={e => { if (e.target === e.currentTarget) setSyncModal(false); }}>
+          <div className="w-full max-w-sm rounded-xl shadow-2xl overflow-hidden"
+            style={{ background: "var(--card)" }}>
+            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
+              <span className="font-bold text-base">{t.common.syncDone}</span>
+              <button onClick={() => setSyncModal(false)} aria-label="Close"
+                className="text-xl leading-none p-1" style={{ color: "var(--muted)" }}>×</button>
+            </div>
+            <div className="px-5 py-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--muted)" }}>{t.parts.colPartNo}</span>
+                <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.upsertedParts}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--muted)" }}>{t.parts.colLocations}</span>
+                <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.upsertedStocks}</span>
+              </div>
+            </div>
+            <div className="px-5 pb-4">
+              <button onClick={() => setSyncModal(false)}
+                className="w-full py-2.5 rounded-lg font-semibold text-sm"
+                style={{ background: "var(--primary)", color: "#fff" }}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

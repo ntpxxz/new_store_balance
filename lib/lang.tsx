@@ -38,7 +38,7 @@ export type Translations = {
 
 const T: Record<Lang, Translations> = {
   en: {
-    nav: { home: "Home", receive: "Receive", parts: "Parts", iqc: "IQC", track: "Track", bin: "Bin", subtitle: "Main Warehouse" },
+    nav: { home: "Home", receive: "Receive", parts: "Parts", iqc: "IQC", track: "Track", bin: "Bin", subtitle: "Warehouse" },
     as400: {
       title: "AS400 Pending Confirm",
       desc: "RPA has filled all data — please verify the screen and confirm",
@@ -142,7 +142,7 @@ const T: Record<Lang, Translations> = {
 };
 
 const LangContext = createContext<{ t: Translations; lang: Lang; setLang: (l: Lang) => void }>({
-  t: T.en, lang: "en", setLang: () => {},
+  t: T.en, lang: "en", setLang: () => { },
 });
 
 export function LangProvider({ children }: { children: ReactNode }) {
