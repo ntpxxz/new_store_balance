@@ -9,15 +9,21 @@ export default async function BinPage() {
   if (!user) redirect('/login');
 
   const rows = await prisma.stock.findMany({
-    include: { part: { select: { partNo: true, partName: true } } },
-    orderBy: [{ location: 'asc' }, { part: { partNo: 'asc' } }],
+    orderBy: [{ location: 'asc' }, { partId: 'asc' }],
     take: 500,
   });
 
+  const partIds = [...new Set(rows.map((r: any) => r.partId).filter(Boolean))];
+  const parts = await prisma.part.findMany({
+    where: { partNo: { in: partIds } },
+    select: { partNo: true, partName: true },
+  });
+  const partMap = new Map(parts.map((p: any) => [p.partNo, p]));
+
   const initial: BinRow[] = rows.map((r: any) => ({
     id: r.id,
-    partNo: r.part.partNo,
-    partName: r.part.partName,
+    partNo: r.partId,
+    partName: partMap.get(r.partId)?.partName ?? null,
     location: r.location,
     wh: r.wh,
     as400Location: r.as400Location,
