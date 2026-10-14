@@ -124,7 +124,7 @@ model Part {
   latestUpdateOperatorName String?
   lastUpdateWorkstn        String?
   latestUpdateProgram      String?
-  updatedAt                DateTime  @updatedAt
+  updatedAt                DateTime?
   bomItems      BOMItem[]
   inboundTasks  InboundTask[]
   movements     Movement[]
@@ -174,7 +174,7 @@ model Stock {
   latestOperator      String?  // LATEST_UPDATE_OPERATOR
   latestOperatorName  String?  // LATEST_UPDATE_OPERATOR_NAME
   quantity            Float    @default(0)  // STOCK_QTY
-  updatedAt           DateTime @updatedAt
+  updatedAt           DateTime?
   part                Part     @relation(fields: [partId], references: [partNo])
 
   @@unique([partId, location, wh])
