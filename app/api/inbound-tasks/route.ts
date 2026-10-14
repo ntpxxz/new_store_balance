@@ -60,15 +60,15 @@ export async function GET(request: NextRequest) {
 
         const tasks = await prisma.inboundTask.findMany({
             where,
-            include: { inspection: true, part: { select: { drawingNo: true, spec: true } } },
+            include: { inspection: true, part: { select: { itemDraw: true, itemSpec: true } } },
             orderBy: { createdAt: 'desc' },
             take: 300,
         });
 
         const mappedTasks = tasks.map((t: any) => ({
             ...t,
-            itemDraw: t.part?.drawingNo ?? null,
-            itemSpec: t.part?.spec ?? null,
+            itemDraw: t.part?.itemDraw ?? null,
+            itemSpec: t.part?.itemSpec ?? null,
             passedQty: t.inspection?.passedQty,
             failedQty: t.inspection?.failedQty,
             judgment: t.inspection?.judgment,
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         let partId = v.partId;
         if (!partId) {
             const part = await prisma.part.findUnique({ where: { partNo: v.partNo } });
-            if (part) partId = part.id;
+            if (part) partId = part.partNo;
         }
 
         const task = await prisma.inboundTask.create({

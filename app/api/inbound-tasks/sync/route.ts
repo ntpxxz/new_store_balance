@@ -40,12 +40,12 @@ export async function POST(request: NextRequest) {
     for (const task of unlinkedTasks) {
       const part = await prisma.part.findUnique({
         where: { partNo: task.partNo },
-        select: { id: true },
+        select: { partNo: true },
       });
       if (part) {
         await prisma.inboundTask.update({
           where: { id: task.id },
-          data: { partId: part.id },
+          data: { partId: part.partNo },
         });
         linked++;
       }
