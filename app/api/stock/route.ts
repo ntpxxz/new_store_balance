@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const where: any = search ? {
       OR: [
         { part: { partNo: { contains: search } } },
-        { part: { name: { contains: search } } },
+        { part: { partName: { contains: search } } },
         { location: { contains: search } },
         { as400Location: { contains: search } },
         { vendorName: { contains: search } },
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const rows = await prisma.stock.findMany({
       where,
-      include: { part: { select: { partNo: true, name: true } } },
+      include: { part: { select: { partNo: true, partName: true } } },
       orderBy: [{ location: 'asc' }, { part: { partNo: 'asc' } }],
       take: 500,
     });
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     return createResponse(rows.map((r: any) => ({
       id: r.id,
       partNo: r.part.partNo,
-      partName: r.part.name,
+      partName: r.part.partName,
       location: r.location,
       wh: r.wh,
       as400Location: r.as400Location,
