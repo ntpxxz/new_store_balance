@@ -16,15 +16,15 @@ export default async function TrackPage() {
 
   const rows = await prisma.inboundTask.findMany({
     where: { AND: [PART_FILTER] },
-    include: { inspection: true, part: { select: { drawingNo: true, spec: true } } },
+    include: { inspection: true, part: { select: { itemDraw: true, itemSpec: true } } },
     orderBy: { createdAt: 'desc' },
     take: 300,
   });
 
   const tasks: Task[] = rows.map((t: any) => ({
     ...t,
-    itemDraw: t.part?.drawingNo ?? null,
-    itemSpec: t.part?.spec ?? null,
+    itemDraw: t.part?.itemDraw ?? null,
+    itemSpec: t.part?.itemSpec ?? null,
     passedQty: t.inspection?.passedQty,
     failedQty: t.inspection?.failedQty,
     judgment: t.inspection?.judgment,
