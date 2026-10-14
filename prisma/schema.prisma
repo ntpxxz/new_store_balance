@@ -70,26 +70,61 @@ model Supplier {
 }
 
 model Part {
-  id            String              @id @default(uuid())
-  partNo        String              @unique
-  name          String?
-  spec          String?
-  drawingNo     String?
-  unit          String              @default("PCS")
-  safetyStock   Float               @default(0)
-  icon          String?
-  imageUrl      String?
-  // AS400 / PBASS master fields
-  plac          String?             // PLAC (plant code, e.g. T2)
-  division      String?             // DIVISION (e.g. T271DM)
-  divisionName  String?             // DIVISION_NAME (e.g. SPINDLE MOTOR)
-  itemType      String?             // ITEM_TYPE (e.g. P = purchased)
-  dept          String?             // DEPT
-  acCode        String?             // AC_CODE
-  // Carton packing quantity (pcs/box)
-  standardPackingQty Float?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  partNo                   String    @id
+  partName                 String?
+  itemSpec                 String?
+  itemDraw                 String?
+  account                  String?
+  plac                     String?
+  vendorCode               String?
+  vendorName               String?
+  unitPrice                Float?
+  currency                 String?
+  purStandardQty           Float?
+  purLeadTime              Float?
+  minOrder                 Float?
+  lotSize                  Float?
+  mfgStandardQty           Float?
+  mfgLeadTime              Float?
+  safetyStock              Float     @default(0)
+  onHand                   Float?
+  allocated                Float?
+  unit                     String    @default("PCS")
+  itemType                 String?
+  stockType                String?
+  dept                     String?
+  directIndirect           String?
+  productCode              String?
+  sourceCode               String?
+  orgnCode                 String?
+  wcCode                   String?
+  clCode                   String?
+  boiCode                  String?
+  lineNo                   String?
+  modelGroup               String?
+  masterLevel              String?
+  deliveryToCode           String?
+  maker                    String?
+  makerCode                String?
+  makerName                String?
+  makerSpec                String?
+  wpcNo                    String?
+  mainWarehouse            String?
+  mainLocation             String?
+  issuedControl            String?
+  customControl            String?
+  payDuty                  String?
+  kzwItemNo                String?
+  bearingSeqNo             String?
+  pendingCode              String?
+  remark                   String?
+  latestUpdateDate         DateTime?
+  latestUpdateTime         String?
+  latestUpdateOperator     String?
+  latestUpdateOperatorName String?
+  lastUpdateWorkstn        String?
+  latestUpdateProgram      String?
+  updatedAt                DateTime  @updatedAt
   bomItems      BOMItem[]
   inboundTasks  InboundTask[]
   movements     Movement[]
@@ -99,8 +134,8 @@ model Part {
   stockLots     StockLot[]
   suppliers     Supplier[]          @relation("PartSupplier")
   cartonMaster  CartonMaster?
+  mrList        MrList[]
 
-  @@index([partNo])
   @@map("master_parts")
 }
 
@@ -133,14 +168,14 @@ model Stock {
   stdAmount           Float?   // STD_AMOUNT
   actAmount           Float?   // ACT_AMOUNT
   localCur            String?  // LOCAL_CUR (currency)
-  lastStockIn         String?  // LAST_STOCK_IN_UPDATE
-  lastIssued          String?  // LAST_ISSUED_UPDATE
-  latestUpdateDate    String?  // LATEST_UPDATE_DATE
+  lastStockIn         DateTime?  // LAST_STOCK_IN_UPDATE
+  lastIssued          DateTime?  // LAST_ISSUED_UPDATE
+  latestUpdateDate    DateTime?  // LATEST_UPDATE_DATE
   latestOperator      String?  // LATEST_UPDATE_OPERATOR
   latestOperatorName  String?  // LATEST_UPDATE_OPERATOR_NAME
   quantity            Float    @default(0)  // STOCK_QTY
   updatedAt           DateTime @updatedAt
-  part                Part     @relation(fields: [partId], references: [id])
+  part                Part     @relation(fields: [partId], references: [partNo])
 
   @@unique([partId, location, wh])
   @@map("inventory_stocks")
@@ -154,7 +189,7 @@ model Movement {
   docRef    String?
   createdAt DateTime @default(now())
   location  String?
-  part      Part     @relation(fields: [partId], references: [id])
+  part      Part     @relation(fields: [partId], references: [partNo])
 
   @@map("inventory_movements")
 }
@@ -170,7 +205,7 @@ model StockLot {
   remainingQty Float    @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  part         Part     @relation(fields: [partId], references: [id])
+  part         Part     @relation(fields: [partId], references: [partNo])
 
   @@index([partId, receivedAt])
   @@index([partId, remainingQty])
@@ -222,7 +257,7 @@ model InboundTask {
   samplingType   String?
   totalSampling  Int?
   assignee       User?              @relation("AssignedUser", fields: [assignedTo], references: [id])
-  part           Part?              @relation(fields: [partId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  part           Part?              @relation(fields: [partId], references: [partNo], onDelete: NoAction, onUpdate: NoAction)
   poItem         PurchaseOrderItem? @relation(fields: [poItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   inspection     InspectionResult?
   as400Queue AS400Queue[]
@@ -249,7 +284,7 @@ model OutboundTask {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   bomItem   BOMItem? @relation(fields: [bomItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  part      Part?    @relation(fields: [partId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  part      Part?    @relation(fields: [partId], references: [partNo], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("outbound_tasks")
 }
@@ -280,7 +315,7 @@ model PurchaseOrderItem {
   unitPrice    Float?
   totalAmount  Float?
   inboundTasks InboundTask[]
-  part         Part          @relation(fields: [partId], references: [id])
+  part         Part          @relation(fields: [partId], references: [partNo])
   po           PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
 
   @@map("purchase_order_items")
@@ -308,7 +343,7 @@ model MrList {
   id         String    @id @default(cuid())
   pickNo     String    @unique
   moNo       String
-  itemNo     String?
+  partNo     String?   @map("itemNo")
   itemName   String?
   planQty    Float?
   issueQty   Float?
@@ -317,10 +352,12 @@ model MrList {
   statusName String?
   schdDate   DateTime?
   fgMo       String?
+  partId     String?
+  part       Part?     @relation(fields: [partId], references: [partNo])
   syncedAt   DateTime  @updatedAt
 
   @@index([moNo])
-  @@index([itemNo])
+  @@index([partNo])
   @@map("mr_list")
 }
 
@@ -330,7 +367,7 @@ model BOMItem {
   partId            String
   requiredQty       Float
   pickedQty         Float           @default(0)
-  part              Part            @relation(fields: [partId], references: [id])
+  part              Part            @relation(fields: [partId], references: [partNo])
   productionOrder   ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
   outboundTasks     OutboundTask[]
 
