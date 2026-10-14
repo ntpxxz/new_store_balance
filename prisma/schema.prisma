@@ -168,9 +168,9 @@ model Stock {
   stdAmount           Float?   // STD_AMOUNT
   actAmount           Float?   // ACT_AMOUNT
   localCur            String?  // LOCAL_CUR (currency)
-  lastStockIn         DateTime?  // LAST_STOCK_IN_UPDATE
-  lastIssued          DateTime?  // LAST_ISSUED_UPDATE
-  latestUpdateDate    DateTime?  // LATEST_UPDATE_DATE
+  lastStockIn         String?  // LAST_STOCK_IN_UPDATE
+  lastIssued          String?  // LAST_ISSUED_UPDATE
+  latestUpdateDate    String?  // LATEST_UPDATE_DATE
   latestOperator      String?  // LATEST_UPDATE_OPERATOR
   latestOperatorName  String?  // LATEST_UPDATE_OPERATOR_NAME
   quantity            Float    @default(0)  // STOCK_QTY
