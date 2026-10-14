@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
     try {
         const part = await prisma.part.findUnique({
-            where: { id },
+            where: { partNo: id },
             include: {
                 stocks: {
                     orderBy: { quantity: 'desc' },
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
         const totalQty = part.stocks.reduce((s, r) => s + (r.quantity ?? 0), 0);
 
-        return createResponse({ ...part, totalQty });
+        return createResponse({ ...part, totalQty, name: part.partName, spec: part.itemSpec, drawingNo: part.itemDraw });
     } catch (error) {
         logger.error({ err: error }, 'Get part detail error');
         captureException(error, { route: '/api/parts/[id]' });

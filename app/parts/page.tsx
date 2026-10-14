@@ -15,12 +15,12 @@ export default async function PartsPage() {
   });
 
   const parts: Part[] = rows.map((p: any) => ({
-    id: p.id,
+    id: p.partNo,
     partNo: p.partNo,
-    name: p.name,
+    name: p.partName ?? '',
     unit: p.unit,
     safetyStock: p.safetyStock ?? 0,
-    divisionName: p.divisionName,
+    divisionName: null,
     qty: p.stocks.reduce((s: number, r: any) => s + (r.quantity ?? 0), 0),
     locations: p.stocks.map((r: any) => r.location).filter(Boolean),
   }));
