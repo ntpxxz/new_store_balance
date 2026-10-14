@@ -8,7 +8,11 @@ export default async function BinPage() {
   const user = await getServerUser();
   if (!user) redirect('/login');
 
+  const bins = await prisma.binConfig.findMany({ select: { location: true } });
+  const binLocations = bins.map(b => b.location);
+
   const rows = await prisma.stock.findMany({
+    where: { location: { in: binLocations } },
     orderBy: [{ location: 'asc' }, { partId: 'asc' }],
     take: 500,
   });
