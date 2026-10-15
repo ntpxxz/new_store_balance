@@ -193,7 +193,7 @@ export const api = {
     req(`/api/inbound-tasks/${id}/iqc-pass`, { method: "POST", body: JSON.stringify(body) }),
   iqcFail: (id: string, body: { passedQty?: number; failedQty?: number; defectReason: string; inspector?: string; remark?: string }) =>
     req(`/api/inbound-tasks/${id}/iqc-fail`, { method: "POST", body: JSON.stringify(body) }),
-  listBinConfigs: () => req(`/api/bin-configs`) as Promise<{ id: string; location: string; maxCapacity: number }[]>,
+  listBinConfigs: () => req(`/api/bin-configs`) as Promise<{ id: string; location: string; maxCapacity: number; isLocked: boolean }[]>,
   addBinConfig: (location: string, maxCapacity = 0) =>
     req(`/api/bin-configs`, { method: "POST", body: JSON.stringify({ location, maxCapacity }) }),
   deleteBinConfig: (location: string) =>
