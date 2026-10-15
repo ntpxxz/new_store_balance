@@ -17,6 +17,30 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
     initialRows ? "ok" : "idle"
   );
   const [error, setError] = useState("");
+  const [bins, setBins] = useState<{ id: string; location: string; maxCapacity: number }[]>([]);
+  const [newBin, setNewBin] = useState("");
+  const [binBusy, setBinBusy] = useState(false);
+
+  const loadBins = useCallback(async () => {
+    try { setBins(await api.listBinConfigs()); } catch {}
+  }, []);
+
+  const addBin = useCallback(async () => {
+    const loc = newBin.trim();
+    if (!loc) return;
+    setBinBusy(true);
+    try { await api.addBinConfig(loc); setNewBin(""); await loadBins(); load(); }
+    catch (e: any) { setError(e.message); }
+    finally { setBinBusy(false); }
+  }, [newBin, loadBins]);
+
+  const removeBin = useCallback(async (loc: string) => {
+    if (!confirm(`Remove bin "${loc}"?`)) return;
+    setBinBusy(true);
+    try { await api.deleteBinConfig(loc); await loadBins(); load(); }
+    catch (e: any) { setError(e.message); }
+    finally { setBinBusy(false); }
+  }, [loadBins]);
 
   const load = useCallback(async () => {
     setLoadState("loading");
@@ -32,6 +56,7 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
 
   const didInit = useRef(false);
   useEffect(() => {
+    loadBins();
     if (!didInit.current && initialRows) { didInit.current = true; return; }
     didInit.current = true;
     load();
@@ -58,6 +83,45 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
               <Search className="text-lg" />
             </button>
           </div>
+        </div>
+
+        {/* Registered bins admin */}
+        <div className="card p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold">Registered Bins</h3>
+            <span className="text-xs" style={{ color: "var(--muted)" }}>{bins.length}</span>
+          </div>
+          <div className="flex gap-2 mb-3">
+            <input
+              className="field flex-1"
+              placeholder="Bin location (e.g. A-01, Rack-3)"
+              value={newBin}
+              onChange={(e) => setNewBin(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addBin()}
+              disabled={binBusy}
+            />
+            <button type="button" className="btn btn-primary" onClick={addBin} disabled={binBusy || !newBin.trim()}>
+              Add
+            </button>
+          </div>
+          {bins.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {bins.map((b) => (
+                <span key={b.id} className="badge badge-muted flex items-center gap-1.5 pr-1">
+                  {b.location}
+                  <button
+                    type="button"
+                    aria-label={`remove ${b.location}`}
+                    className="hover:text-red-600 text-base leading-none px-1"
+                    onClick={() => removeBin(b.location)}
+                    disabled={binBusy}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {loadState === "loading" && <Info>{t.common.loading}</Info>}
