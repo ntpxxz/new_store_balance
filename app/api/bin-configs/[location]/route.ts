@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyAuth, createResponse, createErrorResponse } from '@/lib/auth';
-import { partTotals } from '@/lib/bin-rows';
+import { partTotals, binDetail } from '@/lib/bin-rows';
 
 // Floor bins live in bin_stocks. AS400 inventory_stocks is read-only here: it caps how much of a part
 // can be placed (available = AS400 total − already in bins) and flags parts whose totals don't match.
@@ -13,32 +13,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ loc
   if ('error' in authResult) return createErrorResponse(authResult.error, authResult.status);
 
   const part = new URL(request.url).searchParams.get('part')?.trim();
-  const [bin, rows, found] = await Promise.all([
-    prisma.binConfig.findUnique({ where: { location } }),
-    prisma.binStock.findMany({ where: { location }, orderBy: { partId: 'asc' } }),
-    part
-      ? prisma.part.findMany({ where: { partNo: { contains: part } }, select: { partNo: true, partName: true }, take: 10 })
-      : Promise.resolve([]),
-  ]);
-
-  const names = new Map((await prisma.part.findMany({
-    where: { partNo: { in: rows.map(r => r.partId) } }, select: { partNo: true, partName: true },
-  })).map(p => [p.partNo, p.partName]));
-  const totals = await partTotals([...rows.map(r => r.partId), ...found.map(p => p.partNo)]);
-
-  return createResponse({
-    bin,
-    rows: rows.map(r => ({
-      id: r.id, partNo: r.partId, partName: names.get(r.partId) ?? null, location: r.location,
-      wh: null, quantity: r.quantity, vendorName: null,
-      latestUpdateDate: r.updatedAt.toISOString().slice(0, 16).replace('T', ' '), latestOperatorName: r.updatedBy,
-      as400Qty: totals.get(r.partId)!.as400, binsQty: totals.get(r.partId)!.bins,
-    })),
-    candidates: found.map(p => {
-      const t = totals.get(p.partNo)!;
-      return { partNo: p.partNo, partName: p.partName, available: Math.max(0, t.as400 - t.bins) };
-    }),
-  });
+  return createResponse(await binDetail(location, part));
 }
 
 // POST /api/bin-configs/:location { action: 'add' | 'remove', partNo, qty }
