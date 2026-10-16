@@ -80,6 +80,7 @@ export async function POST(
                 vendorCode:    supplier?.code ?? task.vendor,
                 vendorName:    task.vendor,
                 matLot:        task.invoiceNo,
+                doNo:          task.doNo,
                 itemNo:        task.partNo,
                 stockQty:      Number(receivedQty),
                 itemType:      'P',

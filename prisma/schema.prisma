@@ -460,6 +460,7 @@ model AS400Queue {
   vendorCode    String?   @map("VENDOR_CODE")
   vendorName    String?   @map("VENDOR_NAME")
   matLot        String?   @map("MATLOT")
+  doNo          String?   @map("DO_NO")
   itemNo        String?   @map("ITEM_NO")
   stockQty      Decimal?  @map("STOCK_QTY")
   itemType      String?   @map("ITEM_TYPE")
