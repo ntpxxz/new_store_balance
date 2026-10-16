@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        if (user) {
+        if (user && user.isActive) { // deactivated users get the same "invalid credentials" response
             // Check if password matches (either hashed or plain text for migration)
             let isPasswordValid = false;
 

@@ -421,6 +421,20 @@ model BinConfig {
   @@map("bin_configs")
 }
 
+// Floor bin contents (rack A-01 …), managed in the app only — never touches AS400 inventory_stocks
+model BinStock {
+  id        String   @id @default(cuid())
+  location  String
+  partId    String
+  quantity  Float    @default(0)
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+
+  @@unique([location, partId])
+  @@index([partId])
+  @@map("bin_stocks")
+}
+
 model SyncHistory {
   id        String   @id @default(uuid())
   type      String

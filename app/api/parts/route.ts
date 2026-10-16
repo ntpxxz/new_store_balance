@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
         if (search) {
             where.OR = [
                 { partNo: { contains: search } },
-                { name: { contains: search } },
-                { divisionName: { contains: search } },
+                { partName: { contains: search } },
             ];
         }
 
@@ -31,12 +30,11 @@ export async function GET(request: NextRequest) {
         const rows = parts.map((p: any) => {
             const qty = p.stocks.reduce((s: number, r: any) => s + (r.quantity ?? 0), 0);
             return {
-                id: p.id,
+                id: p.partNo,
                 partNo: p.partNo,
-                name: p.name,
+                name: p.partName,
                 unit: p.unit,
                 safetyStock: p.safetyStock ?? 0,
-                divisionName: p.divisionName,
                 qty,
                 locations: p.stocks.map((r: any) => r.location).filter(Boolean),
             };

@@ -39,7 +39,7 @@ export default function ReceiveClient({
     return () => clearTimeout(id);
   }, [syncModal]);
   const [counts, setCounts] = useState<Record<string, number>>(initialCounts ?? {});
-  const todayStr = () => new Date().toISOString().slice(0, 10);
+  const todayStr = () => new Date().toLocaleDateString("sv-SE"); // local YYYY-MM-DD (toISOString is UTC → yesterday before 07:00 in TH)
   const [syncFrom, setSyncFrom] = useState(todayStr);
   const [syncTo, setSyncTo] = useState(todayStr);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -50,24 +50,35 @@ export default function ReceiveClient({
     { key: "completed", label: t.receive.tabDone },
   ];
 
+  const dFrom = filterOpen ? syncFrom : undefined;
+  const dTo = filterOpen ? syncTo : undefined;
+
+  // drop out-of-order responses (fast date/tab changes)
+  const reqId = useRef(0);
+  const countsReqId = useRef(0);
+
   const loadCounts = useCallback(async () => {
+    const id = ++countsReqId.current;
     try {
-      const c = await api.getCounts();
-      setCounts(c);
+      const c = await api.getCounts(dFrom, dTo);
+      if (id === countsReqId.current) setCounts(c);
     } catch {}
-  }, []);
+  }, [dFrom, dTo]);
 
   const load = useCallback(async (currentTab = tab) => {
+    const id = ++reqId.current;
     setLoadState("loading");
     try {
-      const data = await api.listTasks(currentTab, searchRef.current.trim() || undefined);
+      const data = await api.listTasks(currentTab, searchRef.current.trim() || undefined, dFrom, dTo);
+      if (id !== reqId.current) return;
       setTasks(data);
       setLoadState("ok");
     } catch (e: any) {
+      if (id !== reqId.current) return;
       setError(e.message);
       setLoadState("error");
     }
-  }, [tab]);
+  }, [tab, dFrom, dTo]);
 
   const handleSync = useCallback(() => {
     const ctrl = new AbortController();
@@ -84,7 +95,7 @@ export default function ReceiveClient({
         load();
         loadCounts();
       });
-  }, [load, syncFrom, syncTo]);
+  }, [load, loadCounts, syncFrom, syncTo]);
 
   const handleCancelSync = useCallback(() => {
     syncAbortRef.current?.abort();
@@ -97,7 +108,24 @@ export default function ReceiveClient({
     }
   }, [tasks, loadState]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // keep date filter across browser reload (per tab); restore must run before save
+  useEffect(() => {
+    try {
+      const s = JSON.parse(sessionStorage.getItem("receive.dateFilter") || "null");
+      if (s?.open) { setSyncFrom(s.from); setSyncTo(s.to); setFilterOpen(true); }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try { sessionStorage.setItem("receive.dateFilter", JSON.stringify({ open: filterOpen, from: syncFrom, to: syncTo })); } catch {}
+  }, [filterOpen, syncFrom, syncTo]);
+
   const didInit = useRef(false);
+  // reload when date filter changes (declared before init effect so it skips first mount)
+  useEffect(() => {
+    if (didInit.current) { load(); loadCounts(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dFrom, dTo]);
+
   useEffect(() => {
     if (!didInit.current && initialTasks) {
       didInit.current = true;
@@ -157,7 +185,7 @@ export default function ReceiveClient({
                 </button>
               </div>
               {/* Filter toggle */}
-              <button type="button" onClick={() => setFilterOpen(o => !o)} aria-label="Filter"
+              <button type="button" onClick={() => setFilterOpen(o => !o)} aria-label="Filter" aria-pressed={filterOpen}
                 className="shrink-0 p-2 rounded-lg border"
                 style={{
                   borderColor: filterOpen ? "var(--primary)" : "var(--border)",
@@ -185,9 +213,11 @@ export default function ReceiveClient({
           </div>
           {filterOpen && (
             <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: "var(--muted)" }}>
-<input type="date" className="field py-1 text-xs flex-1" value={syncFrom} onChange={e => setSyncFrom(e.target.value)} />
+              <input type="date" className="field py-1 text-xs flex-1" value={syncFrom} max={syncTo || undefined}
+                onChange={e => setSyncFrom(e.target.value)} />
               <span>—</span>
-              <input type="date" className="field py-1 text-xs flex-1" value={syncTo} onChange={e => setSyncTo(e.target.value)} />
+              <input type="date" className="field py-1 text-xs flex-1" value={syncTo} min={syncFrom || undefined}
+                onChange={e => setSyncTo(e.target.value)} />
             </div>
           )}
 
@@ -225,7 +255,7 @@ export default function ReceiveClient({
                   </thead>
                   <tbody>
                     {tasks.map((tk) => (
-                      <tr key={tk.id} className="border-t hover:bg-[#f7f9fc] cursor-pointer" style={{ borderColor: "var(--border)" }}
+                      <tr key={tk.id} className="border-t hover:bg-[var(--table-head)] cursor-pointer" style={{ borderColor: "var(--border)" }}
                         onClick={() => router.push(`/receive/${tk.id}`)}>
                         <Td>
                           <Link href={`/receive/${tk.id}`} className="flex items-center gap-2 font-semibold" style={{ color: "var(--primary)" }}>

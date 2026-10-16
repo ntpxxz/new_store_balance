@@ -113,6 +113,18 @@ export type StockRow = {
   latestUpdateDate?: string | null;
 };
 
+export type UserRow = {
+  id: string; username: string; email: string | null; role: string; section: string; isActive: boolean; createdAt: string;
+};
+
+export type BinDetail = {
+  bin: { id: string; location: string; maxCapacity: number; isLocked: boolean } | null;
+  rows: { id: string; partNo: string; partName: string | null; location: string; wh: string | null; quantity: number;
+    vendorName: string | null; latestUpdateDate: string | null; latestOperatorName: string | null;
+    as400Qty: number; binsQty: number }[]; // part totals: AS400 vs all bins — must be equal
+  candidates: { partNo: string; partName: string | null; available: number }[];
+};
+
 export type BinRow = {
   id: string;
   partNo: string;
@@ -125,6 +137,7 @@ export type BinRow = {
   vendorName?: string | null;
   lastStockIn?: string | null;
   latestUpdateDate?: string | null;
+  mismatch?: boolean; // AS400 total ≠ total across all bins
 };
 
 export type PartDetail = {
@@ -169,10 +182,11 @@ export const api = {
     const { signal, ...body } = opts ?? {};
     return req(`/api/inbound-tasks/sync`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal }) as Promise<{ fetched: number; upserted: number; skipped: number; sourceDuplicates: number; dbCount: number }>;
   },
-  listTasks: (status: string, search?: string) =>
-    req(`/api/inbound-tasks?status=${status}${search ? `&search=${encodeURIComponent(search)}` : ""}`) as Promise<Task[]>,
+  listTasks: (status: string, search?: string, dateFrom?: string, dateTo?: string) =>
+    req(`/api/inbound-tasks?status=${status}${search ? `&search=${encodeURIComponent(search)}` : ""}${dateFrom ? `&dateFrom=${dateFrom}` : ""}${dateTo ? `&dateTo=${dateTo}` : ""}`) as Promise<Task[]>,
   getTask: (id: string) => req(`/api/inbound-tasks/${id}`) as Promise<Task>,
-  getCounts: () => req(`/api/inbound-tasks/counts`) as Promise<Record<string, number>>,
+  getCounts: (dateFrom?: string, dateTo?: string) =>
+    req(`/api/inbound-tasks/counts?${dateFrom ? `dateFrom=${dateFrom}&` : ""}${dateTo ? `dateTo=${dateTo}` : ""}`) as Promise<Record<string, number>>,
   syncStock: () => req(`/api/parts/sync`, { method: "POST" }) as Promise<{ fetched: number; upsertedParts: number; upsertedStocks: number; errors: string[] }>,
   getPart: (id: string) => req(`/api/parts/${id}`) as Promise<PartDetail>,
   listParts: (search?: string) =>
@@ -198,4 +212,13 @@ export const api = {
     req(`/api/bin-configs`, { method: "POST", body: JSON.stringify({ location, maxCapacity }) }),
   deleteBinConfig: (location: string) =>
     req(`/api/bin-configs/${encodeURIComponent(location)}`, { method: "DELETE" }),
+  listUsers: () => req(`/api/users`) as Promise<UserRow[]>,
+  createUser: (body: { username: string; password: string; email?: string | null; role: string; section: string }) =>
+    req(`/api/users`, { method: "POST", body: JSON.stringify(body) }) as Promise<UserRow>,
+  updateUser: (id: string, body: Partial<Pick<UserRow, "email" | "role" | "section" | "isActive">> & { password?: string }) =>
+    req(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(body) }) as Promise<UserRow>,
+  getBin: (location: string, part?: string) =>
+    req(`/api/bin-configs/${encodeURIComponent(location)}${part ? `?part=${encodeURIComponent(part)}` : ""}`) as Promise<BinDetail>,
+  moveBinStock: (location: string, body: { action: "add" | "remove"; partNo: string; qty: number }) =>
+    req(`/api/bin-configs/${encodeURIComponent(location)}`, { method: "POST", body: JSON.stringify(body) }),
 };

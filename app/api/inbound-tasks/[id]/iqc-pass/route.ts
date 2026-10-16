@@ -38,7 +38,7 @@ export async function POST(
 
         // Resolve partId — needed for StockLot (may not be set on older tasks)
         const partId = task.partId ||
-            (await prisma.part.findUnique({ where: { partNo: task.partNo }, select: { id: true } }))?.id;
+            (await prisma.part.findUnique({ where: { partNo: task.partNo }, select: { partNo: true } }))?.partNo;
 
         const result = await prisma.$transaction(async (tx) => {
             const updatedTask = await tx.inboundTask.update({
@@ -63,6 +63,16 @@ export async function POST(
                         originalQty: Number(passedQty),
                         remainingQty: Number(passedQty),
                     }
+                });
+            }
+
+            // Put-away: passed qty goes onto the floor rack chosen at receive (bin_stocks only, AS400 untouched)
+            if (task.targetLocation && Number(passedQty) > 0 &&
+                await tx.binConfig.findUnique({ where: { location: task.targetLocation } })) {
+                await tx.binStock.upsert({
+                    where: { location_partId: { location: task.targetLocation, partId: task.partNo } },
+                    update: { quantity: { increment: Number(passedQty) }, updatedBy: inspector || 'IQC_SYSTEM' },
+                    create: { location: task.targetLocation, partId: task.partNo, quantity: Number(passedQty), updatedBy: inspector || 'IQC_SYSTEM' },
                 });
             }
 

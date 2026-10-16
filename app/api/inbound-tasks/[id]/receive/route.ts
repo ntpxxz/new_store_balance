@@ -48,8 +48,11 @@ export async function POST(
             return createErrorResponse(`Received quantity (${receivedQty}) exceeds planned quantity (${task.planQty}).`, 400);
         }
 
-        // bin validated required above; item goes to IQC first so no existence check needed
+        // Store bin must be a registered floor rack — IQC pass puts the passed qty into it (bin_stocks)
         const targetLocation = normalizeLocation(bin);
+        const rack = await prisma.binConfig.findUnique({ where: { location: targetLocation } });
+        if (!rack) return createErrorResponse(`Bin "${targetLocation}" is not a registered rack`, 400);
+        if (rack.isLocked) return createErrorResponse(`Bin "${targetLocation}" is locked`, 409);
 
         // Status stays ARRIVED until RPA confirms in AS400 — promote to IQC_WAITING via confirm API
         const updatedTask = await prisma.inboundTask.update({

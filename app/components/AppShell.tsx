@@ -223,6 +223,13 @@ export default function AppShell({
                       {theme === "dark" ? <SunIcon /> : <MoonIcon />}
                     </button>
                   </div>
+                  {/* Admin settings */}
+                  {getUser()?.role === "ADMIN" && (
+                    <Link href="/settings" onClick={() => setSettingsOpen(false)}
+                      className="block px-4 py-2.5 text-sm font-medium" style={{ color: "var(--primary)" }}>
+                      {lang === "th" ? "จัดการผู้ใช้" : "Manage users"}
+                    </Link>
+                  )}
                   {/* Logout */}
                   <div className="border-t mt-1 pt-1" style={{ borderColor: "var(--border)" }}>
                     <button onClick={logout}

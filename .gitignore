@@ -6,3 +6,8 @@ generated
 *.log
 
 certificates
+# build artifacts / DB dumps — keep out of git
+*.tar
+*.tar.gz
+*.sql
+tsconfig.tsbuildinfo

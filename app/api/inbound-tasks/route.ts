@@ -4,6 +4,7 @@ import { verifyAuth, createResponse, createErrorResponse, requireRole } from '@/
 import { logger, captureException } from '@/lib/logger';
 import { logActivity, ActivityType } from '@/lib/audit';
 import { validateRequest, createInboundTaskSchema } from '@/lib/validation';
+import { taskDateWhere } from '@/lib/date-range';
 
 export async function GET(request: NextRequest) {
     const authResult = await verifyAuth(request);
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const statusStr = searchParams.get('status');
         const search = searchParams.get('search');
+        const dateFrom = searchParams.get('dateFrom');
+        const dateTo = searchParams.get('dateTo');
 
         const where: any = {};
 
@@ -57,6 +60,9 @@ export async function GET(request: NextRequest) {
             { partName: { contains: 'DIVERTOR' } },
             { partName: { contains: 'BASEPLATE' } },
         ]}];
+
+        const dateWhere = taskDateWhere(dateFrom, dateTo);
+        if (dateWhere) where.AND.push(dateWhere);
 
         const tasks = await prisma.inboundTask.findMany({
             where,

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
-import { Barcode, Check, ChevronLeft, X, Flask, Monitor } from "@/app/components/icons";
+import { Barcode, QrScan, Check, ChevronLeft, X, Flask, Monitor } from "@/app/components/icons";
 import InvoiceCard from "@/app/components/InvoiceCard";
 import { api, getUser, type Task } from "@/lib/client";
 import { useAuthRedirect } from "@/lib/hooks";
@@ -134,6 +135,10 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   const [showUrgent, setShowUrgent] = useState(false);
   const [note, setNote] = useState("");
   const [bin, setBin] = useState("");
+  const [racks, setRacks] = useState<string[]>([]);
+  useEffect(() => {
+    api.listBinConfigs().then((b) => setRacks(b.filter((x) => !x.isLocked).map((x) => x.location))).catch(() => {});
+  }, []);
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -161,10 +166,8 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
 
       {!scanned ? (
         <Card className="text-center">
-          <div className="font-bold mb-2">Scan to Receive</div>
-          <p className="text-sm mb-4" style={{ color: "var(--muted)" }}>Scan the invoice barcode to confirm receipt of {task.planQty} pcs.</p>
-          <button className="btn btn-accent w-full" onClick={() => setScanning(true)}>
-            <Barcode /> Scan Barcode
+          <button className="btn btn-accent w-full" onClick={() => setScanning(true)} aria-label="Scan QR">
+            <QrScan className="text-lg" /> Scan
           </button>
         </Card>
       ) : (
@@ -176,8 +179,11 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
             <Labeled label="Received Qty">
               <input className="field" value={task.planQty} readOnly />
             </Labeled>
-            <Labeled label="Store Bin *">
-              <input className="field" placeholder="e.g. A-01" value={bin} onChange={(e) => setBin(e.target.value)} required />
+            <Labeled label="Store Bin (rack) *">
+              {/* ponytail: native datalist — pick a registered rack or scan/type it; server rejects unregistered */}
+              <input className="field" placeholder="e.g. A-01" list="rack-list" value={bin}
+                onChange={(e) => setBin(e.target.value)} required />
+              <datalist id="rack-list">{racks.map((r) => <option key={r} value={r} />)}</datalist>
             </Labeled>
           </div>
           <Labeled label="Note" className="mt-4">
@@ -489,7 +495,7 @@ function DonePanel({ task }: { task: Task }) {
       <div className="font-bold">{stored ? "Completed" : "IQC Passed — Done"}</div>
       <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
         {stored
-          ? <>Stored in bin <b>{task.targetLocation}</b>. AS400 queue row written.</>
+          ? <>Stored in rack <Link href={`/bin/${encodeURIComponent(task.targetLocation!)}`} className="font-bold underline">{task.targetLocation}</Link>. AS400 queue row written.</>
           : <>Passed IQC ({task.passedQty ?? task.actualQty} pcs). Receipt complete — AS400 queue updated.</>}
       </p>
     </Card>
