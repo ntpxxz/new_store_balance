@@ -3,13 +3,15 @@
 import { useState } from "react";
 import AppShell from "@/app/components/AppShell";
 import { Plus } from "@/app/components/icons";
-import { Th, Td, Info } from "@/app/components/table";
+import { Info } from "@/app/components/table";
 import { api, type UserRow } from "@/lib/client";
 import { useLang } from "@/lib/lang";
 
 // must match createUserSchema / updateUserSchema in lib/validation.ts
 const ROLES = ["ADMIN", "SUPERVISOR", "USER"];
 const SECTIONS = ["IQC", "WAREHOUSE", "PRODUCTION", "PLANNING", "PURCHASING"];
+// literal class strings — Tailwind cannot see classes built at runtime
+const COLS = "lg:grid-cols-[minmax(0,2fr)_1fr_1fr_5rem_auto]";
 const EMPTY = { username: "", password: "", email: "", role: "USER", section: "IQC" };
 
 export default function SettingsClient({ meId, initialUsers }: { meId: string; initialUsers: UserRow[] }) {
@@ -79,52 +81,44 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
           </form>
         )}
 
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left" style={{ color: "var(--muted)" }}>
-              <tr>
-                <Th>{L("Username", "ชื่อผู้ใช้")}</Th>
-                <Th>{L("Email", "อีเมล")}</Th>
-                <Th>Role</Th>
-                <Th>Section</Th>
-                <Th>{L("Active", "ใช้งาน")}</Th>
-                <Th />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => {
-                const me = u.id === meId;
-                return (
-                  <tr key={u.id} className="border-t" style={{ borderColor: "var(--border)", opacity: u.isActive ? 1 : 0.5 }}>
-                    <Td className="font-semibold">{u.username}{me && <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--muted)" }}>({L("you", "คุณ")})</span>}</Td>
-                    <Td style={{ color: "var(--muted)" }}>{u.email ?? "—"}</Td>
-                    <Td>
-                      <select className="field py-1" aria-label={`Role of ${u.username}`} value={u.role} disabled={busy || me}
-                        onChange={e => update(u, { role: e.target.value })}>
-                        {ROLES.map(r => <option key={r}>{r}</option>)}
-                      </select>
-                    </Td>
-                    <Td>
-                      <select className="field py-1" aria-label={`Section of ${u.username}`} value={u.section} disabled={busy}
-                        onChange={e => update(u, { section: e.target.value })}>
-                        {/* keep legacy values visible if the DB has one outside the list */}
-                        {(SECTIONS.includes(u.section) ? SECTIONS : [u.section, ...SECTIONS]).map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </Td>
-                    <Td>
-                      <input type="checkbox" className="w-4 h-4" aria-label={`Active ${u.username}`} checked={u.isActive} disabled={busy || me}
-                        onChange={e => update(u, { isActive: e.target.checked })} />
-                    </Td>
-                    <Td className="text-right">
-                      <button className="btn btn-ghost py-1.5 text-xs" disabled={busy} onClick={() => resetPassword(u)}>
-                        {L("Reset password", "รีเซ็ตรหัสผ่าน")}
-                      </button>
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* one markup: stacked card per user on mobile, grid row on lg */}
+        <div className="card divide-y" style={{ borderColor: "var(--border)" }}>
+          <div className={`hidden lg:grid ${COLS} px-4 py-3 text-sm font-medium`} style={{ color: "var(--muted)" }}>
+            <div>{L("Username", "ชื่อผู้ใช้")}</div>
+            <div>Role</div>
+            <div>Section</div>
+            <div>{L("Active", "ใช้งาน")}</div>
+            <div />
+          </div>
+          {users.map(u => {
+            const me = u.id === meId;
+            return (
+              <div key={u.id} className={`grid grid-cols-2 ${COLS} gap-x-3 gap-y-2 items-center px-4 py-3 text-sm`}
+                style={{ borderColor: "var(--border)", opacity: u.isActive ? 1 : 0.5 }}>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{u.username}{me && <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--muted)" }}>({L("you", "คุณ")})</span>}</div>
+                  <div className="text-xs truncate" style={{ color: "var(--muted)" }}>{u.email ?? "—"}</div>
+                </div>
+                <label className="flex items-center justify-end lg:justify-start gap-2 lg:order-4">
+                  <span className="lg:hidden text-xs" style={{ color: "var(--muted)" }}>{L("Active", "ใช้งาน")}</span>
+                  <input type="checkbox" className="w-5 h-5" aria-label={`Active ${u.username}`} checked={u.isActive} disabled={busy || me}
+                    onChange={e => update(u, { isActive: e.target.checked })} />
+                </label>
+                <select className="field py-1.5 lg:order-2" aria-label={`Role of ${u.username}`} value={u.role} disabled={busy || me}
+                  onChange={e => update(u, { role: e.target.value })}>
+                  {ROLES.map(r => <option key={r}>{r}</option>)}
+                </select>
+                <select className="field py-1.5 lg:order-3" aria-label={`Section of ${u.username}`} value={u.section} disabled={busy}
+                  onChange={e => update(u, { section: e.target.value })}>
+                  {/* keep legacy values visible if the DB has one outside the list */}
+                  {(SECTIONS.includes(u.section) ? SECTIONS : [u.section, ...SECTIONS]).map(s => <option key={s}>{s}</option>)}
+                </select>
+                <button className="btn btn-ghost py-1.5 text-xs col-span-2 lg:col-span-1 lg:order-5" disabled={busy} onClick={() => resetPassword(u)}>
+                  {L("Reset password", "รีเซ็ตรหัสผ่าน")}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </AppShell>
