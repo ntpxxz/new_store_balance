@@ -54,41 +54,44 @@ export async function POST(
         if (!rack) return createErrorResponse(`Bin "${targetLocation}" is not a registered rack`, 400);
         if (rack.isLocked) return createErrorResponse(`Bin "${targetLocation}" is locked`, 409);
 
-        // Status stays ARRIVED until RPA confirms in AS400 — promote to IQC_WAITING via confirm API
-        const updatedTask = await prisma.inboundTask.update({
-            where: { id: taskId },
-            data: {
-                status: 'ARRIVED',
-                actualQty: receivedQty, // actualQty records what was received for inspection
-                lotNo: lotNo || undefined,
-                targetLocation: targetLocation || undefined,
-                isUrgent: isUrgent ?? task.isUrgent,
-                receiverNote: note || undefined,
-                receivedAt: new Date(),
-                receivedBy: authResult.user.username,
-                updatedAt: new Date()
-            }
-        });
-
-        // ── 0. AS400 Queue: enqueue on physical receipt ───────────────────────
         const supplier = await prisma.supplier.findFirst({
             where: { name: task.vendor }, select: { code: true }
         });
-        prisma.aS400Queue.create({
-            data: {
-                inboundTaskId: taskId,
-                vendorCode:    supplier?.code ?? task.vendor,
-                vendorName:    task.vendor,
-                matLot:        task.invoiceNo,
-                doNo:          task.doNo,
-                itemNo:        task.partNo,
-                stockQty:      Number(receivedQty),
-                itemType:      'P',
-                invDate:       fmtDateAS400(task.invoiceDate ?? task.createdAt),
-                rcvDate:       fmtDateAS400(new Date()),
-                rcvBy:         authResult.user.username,
-            }
-        }).catch(e => logger.error({ err: e, taskId }, 'Failed to enqueue AS400 receive'));
+
+        // Status stays ARRIVED until RPA confirms in AS400 — promote to IQC_WAITING via confirm API
+        // Task update + AS400 enqueue are atomic: if the enqueue fails the receive is rolled back and the error returned
+        const [updatedTask] = await prisma.$transaction([
+            prisma.inboundTask.update({
+                where: { id: taskId },
+                data: {
+                    status: 'ARRIVED',
+                    actualQty: receivedQty, // actualQty records what was received for inspection
+                    lotNo: lotNo || undefined,
+                    targetLocation: targetLocation || undefined,
+                    isUrgent: isUrgent ?? task.isUrgent,
+                    receiverNote: note || undefined,
+                    receivedAt: new Date(),
+                    receivedBy: authResult.user.username,
+                    updatedAt: new Date()
+                }
+            }),
+            // ── 0. AS400 Queue: enqueue on physical receipt ───────────────────────
+            prisma.aS400Queue.create({
+                data: {
+                    inboundTaskId: taskId,
+                    vendorCode:    supplier?.code ?? task.vendor,
+                    vendorName:    task.vendor,
+                    matLot:        task.invoiceNo,
+                    doNo:          task.doNo,
+                    itemNo:        task.partNo,
+                    stockQty:      Number(receivedQty),
+                    itemType:      'P',
+                    invDate:       fmtDateAS400(task.invoiceDate ?? task.createdAt),
+                    rcvDate:       fmtDateAS400(new Date()),
+                    rcvBy:         authResult.user.username,
+                }
+            }),
+        ]);
 
         // ── 1. Audit Logging ──────────────────────────────────────────
         await logActivity({
