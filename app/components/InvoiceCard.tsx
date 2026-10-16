@@ -38,7 +38,12 @@ export default function InvoiceCard({ task, href, showViewDetail = false, classN
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "var(--muted)" }}>{t.card.taxInv}</div>
-          <div className="text-lg font-bold leading-tight tracking-tight" style={{ color: "var(--primary)" }}>{task.doNo || task.invoiceNo}</div>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-lg font-bold leading-tight tracking-tight" style={{ color: "var(--primary)" }}>{task.doNo || task.invoiceNo}</span>
+            {task.doNo && task.invoiceNo && task.invoiceNo !== task.doNo && (
+              <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>INV: {task.invoiceNo}</span>
+            )}
+          </div>
           <div className="mt-1.5 flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--primary)" }}>
             <Db /> {task.partNo}
           </div>
