@@ -78,7 +78,7 @@ function LegendItem({ state, label }: { state: SeatState; label: string }) {
   );
 }
 
-export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
+export default function BinClient({ initialRows, initialBins }: { initialRows?: BinRow[]; initialBins?: BinConfig[] }) {
   const { t, lang } = useLang();
   const L: LFn = (en, th) => (lang === "th" ? th : en);
   const router = useRouter();
@@ -89,7 +89,7 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
     initialRows ? "ok" : "idle"
   );
   const [error, setError] = useState("");
-  const [bins, setBins] = useState<BinConfig[]>([]);
+  const [bins, setBins] = useState<BinConfig[]>(initialBins ?? []);
   const [shelf, setShelfState] = useState(BLOCKS[0]);
 
   // keep the selected rack when coming back from /bin/[location]
@@ -118,7 +118,7 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
 
   const didInit = useRef(false);
   useEffect(() => {
-    loadBins();
+    if (!initialBins) loadBins();
     if (!didInit.current && initialRows) { didInit.current = true; return; }
     didInit.current = true;
     load();
@@ -132,36 +132,47 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
 
   const rowsByKey = useMemo(() => {
     const m = new Map<string, BinRow[]>();
-    for (const r of rows) { const k = seatKey(r.location); if (k) m.set(k, [...(m.get(k) ?? []), r]); }
+    for (const r of rows) {
+      const k = seatKey(r.location);
+      if (k) { const list = m.get(k); if (list) list.push(r); else m.set(k, [r]); }
+    }
     return m;
   }, [rows]);
 
-  const seatInfo = (key: string) => {
-    const bin = binByKey.get(key);
-    const items = rowsByKey.get(key) ?? [];
-    const qty = items.reduce((n, r) => n + (r.quantity || 0), 0);
-    let state: SeatState = "unregistered";
-    if (bin?.isLocked) state = "locked";
-    else if (bin) state = qty <= 0 ? "empty" : bin.maxCapacity > 0 && qty >= bin.maxCapacity ? "full" : "occupied";
-    return { bin, items, qty, state };
-  };
+  // all 40 seats + per-rack stats computed once per data change, not on every keystroke
+  const { seats, stats } = useMemo(() => {
+    const seats = new Map<string, { bin?: BinConfig; items: BinRow[]; qty: number; state: SeatState; alert: boolean }>();
+    const stats = BLOCKS.map((b) => {
+      let used = 0, alert = false;
+      for (const n of SEATS) {
+        const key = `${b}${n}`;
+        const bin = binByKey.get(key);
+        const items = rowsByKey.get(key) ?? [];
+        const qty = items.reduce((s, r) => s + (r.quantity || 0), 0);
+        let state: SeatState = "unregistered";
+        if (bin?.isLocked) state = "locked";
+        else if (bin) state = qty <= 0 ? "empty" : bin.maxCapacity > 0 && qty >= bin.maxCapacity ? "full" : "occupied";
+        const seatAlert = items.some((r) => r.mismatch);
+        seats.set(key, { bin, items, qty, state, alert: seatAlert });
+        if (state === "occupied" || state === "full") used++;
+        alert ||= seatAlert;
+      }
+      return { used, alert };
+    });
+    return { seats, stats };
+  }, [binByKey, rowsByKey]);
 
   const searching = applied !== "";
-  const hits = searching ? BLOCKS.flatMap((b) => SEATS.filter((n) => rowsByKey.has(`${b}${n}`)).map((n) => ({ b, n }))) : [];
+  const hits = useMemo(
+    () => (searching ? BLOCKS.flatMap((b) => SEATS.filter((n) => rowsByKey.has(`${b}${n}`)).map((n) => ({ b, n }))) : []),
+    [searching, rowsByKey]
+  );
 
   // after a search, jump to the first rack with a match if the current one has none
   useEffect(() => {
     if (hits.length && !hits.some((h) => h.b === shelf)) setShelf(hits[0].b);
   }, [applied, rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const blockStats = (b: string) => {
-    const seats = SEATS.map((n) => seatInfo(`${b}${n}`));
-    return {
-      used: seats.filter((s) => s.state === "occupied" || s.state === "full").length,
-      alert: seats.some((s) => s.items.some((r) => r.mismatch)),
-    };
-  };
-  const stats = BLOCKS.map(blockStats);
   const used = stats.reduce((n, s) => n + s.used, 0);
   const alertRacks = stats.filter((s) => s.alert).length;
 
@@ -275,11 +286,11 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" role="tabpanel" aria-label={`Rack ${shelf}`}>
             {SEATS.map((n) => {
               const key = `${shelf}${n}`;
-              const { bin, items, qty, state } = seatInfo(key);
+              const { bin, items, qty, state, alert } = seats.get(key)!;
               return (
                 <BinCard key={key} label={canonical(shelf, n)} state={state} L={L}
                   dimmed={searching && items.length === 0}
-                  alert={items.some((r) => r.mismatch)}
+                  alert={alert}
                   parts={items.length} qty={qty} capacity={bin?.maxCapacity ?? 0}
                   onClick={() => open(shelf, n)} />
               );
