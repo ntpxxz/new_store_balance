@@ -6,3 +6,5 @@ generated
 .env.local
 *.sql
 files/
+*.tar
+*.tar.gz
