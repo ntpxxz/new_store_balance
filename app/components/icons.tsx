@@ -27,4 +27,5 @@ export const Scan = s("M3 7V5a2 2 0 012-2h2|M17 3h2a2 2 0 012 2v2|M21 17v2a2 2 0
 export const QrScan = s("M3 7V5a2 2 0 012-2h2|M17 3h2a2 2 0 012 2v2|M21 17v2a2 2 0 01-2 2h-2|M7 21H5a2 2 0 01-2-2v-2|M7 7h4v4H7z|M13 7h4v4h-4z|M7 13h4v4H7z|M14 14h.01|M17 14v3h-3");
 export const Plus = s("M12 5v14|M5 12h14");
 export const Minus = s("M5 12h14");
+export const Rack = s("M4 3v18|M20 3v18|M4 9h16|M4 15h16|M4 21h16|M7 6h4|M13 12h4|M8 18h4");
 export const Filter = s("M22 3H2l8 9.46V19l4 2V12.46L22 3");

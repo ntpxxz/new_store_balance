@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Home, Download, Box, List, Barcode, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
+import { Home, Download, Box, List, Rack, ChevronLeft, Refresh, Sync, Monitor, Check, X } from "./icons";
 import { api, getUser, logout } from "@/lib/client";
 import { useLang } from "@/lib/lang";
 import { useTheme } from "@/lib/theme";
@@ -85,7 +85,7 @@ export default function AppShell({
     { key: "receive", label: t.nav.receive, href: "/receive", Icon: Download },
     { key: "parts", label: t.nav.parts, href: "/parts", Icon: Box },
 
-    { key: "bin", label: t.nav.bin, href: "/bin", Icon: Barcode },
+    { key: "bin", label: t.nav.bin, href: "/bin", Icon: Rack },
   ];
 
   // ── AS400 confirm modal ─────────────────────────────────────────────────────
