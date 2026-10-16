@@ -348,17 +348,16 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
             {MAX_RETRIES - retries} attempt{MAX_RETRIES - retries !== 1 ? "s" : ""} remaining
           </p>
         )}
+        {!camErr && !tooManyRetries && (
+          <div className="flex items-center justify-center gap-2 text-sm" style={{ color: "#9aa4b2" }}>
+            <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--accent)" }} />
+            Scanning…
+          </div>
+        )}
         <div className="flex gap-3 mt-auto">
-          {camErr || tooManyRetries ? (
-            <button className="btn btn-primary flex-1" onClick={() => { stopReader(); setManual(true); }}>
-              <Barcode /> Enter Manually
-            </button>
-          ) : (
-            <div className="flex-1 flex items-center justify-center gap-2 text-sm" style={{ color: "#9aa4b2" }}>
-              <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--accent)" }} />
-              Scanning…
-            </div>
-          )}
+          <button className="btn btn-primary flex-1" onClick={() => { stopReader(); setManual(true); }}>
+            <Barcode /> Enter Manually
+          </button>
           <button className="btn btn-ghost flex-1" onClick={onCancel}>Cancel</button>
         </div>
         {tooManyRetries && (
