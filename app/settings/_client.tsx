@@ -76,12 +76,16 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-3 text-base" style={{ color: "var(--muted)" }} />
-          <input className="field pl-9 pr-9" type="search" placeholder={L("Search name, email, role, section", "ค้นหาชื่อ อีเมล role section")}
+          <input className="field pr-9" placeholder={L("Search name, email, role, section", "ค้นหาชื่อ อีเมล role section")}
             value={query} onChange={e => setQuery(e.target.value)} />
-          {query && (
-            <button className="absolute right-2.5 top-2.5 p-0.5" aria-label={L("Clear", "ล้าง")} onClick={() => setQuery("")}
-              style={{ color: "var(--muted)" }}><X /></button>
+          {/* right side like /receive: magnifier when empty, clear when typing (filter is live) */}
+          {query ? (
+            <button className="absolute right-2.5 top-2 p-0.5" aria-label={L("Clear", "ล้าง")} onClick={() => setQuery("")}
+              style={{ color: "var(--muted)" }}><X className="text-lg" /></button>
+          ) : (
+            <span className="absolute right-2.5 top-2 p-0.5 pointer-events-none" style={{ color: "var(--muted)" }}>
+              <Search className="text-lg" />
+            </span>
           )}
         </div>
 
@@ -232,11 +236,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   const [show, setShow] = useState(false);
+  const { lang } = useLang();
   return (
     <div className="relative">
       <input {...props} type={show ? "text" : "password"} className="field pr-16" />
       <button type="button" onClick={() => setShow(s => !s)} className="absolute right-2 top-2 px-2 py-0.5 text-xs font-medium rounded"
-        style={{ color: "var(--primary)" }}>{show ? "Hide" : "Show"}</button>
+        style={{ color: "var(--primary)" }} aria-pressed={show}>
+        {lang === "th" ? (show ? "ซ่อน" : "แสดง") : (show ? "Hide" : "Show")}
+      </button>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
-import { Archive, Box, Circle, Search, Scan, Plus, Minus } from "@/app/components/icons";
+import { Archive, Box, Circle, Scan, Plus, Minus } from "@/app/components/icons";
 import { api, type BinDetail } from "@/lib/client";
 import { useAuthRedirect } from "@/lib/hooks";
 import { Info } from "@/app/components/table";
@@ -184,10 +184,7 @@ function AddPanel({ location, rows, total, busy, onSubmit }: {
     <>
       <Section title="Select part" hint="Search or scan a part">
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--muted)" }}>
-            <Search className="text-lg" />
-          </span>
-          <input className="field pl-10 pr-10 h-11" placeholder="Part no." autoFocus value={search}
+          <input className="field pr-10 h-11" placeholder="Part no." autoFocus value={search}
             onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && find()} />
           <button type="button" onClick={find} aria-label="Search part"
             className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5" style={{ color: "var(--primary)" }}>

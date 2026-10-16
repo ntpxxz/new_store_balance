@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
-import { Search, Scan, Archive } from "@/app/components/icons";
+import { Scan, Archive } from "@/app/components/icons";
 import { api, type BinRow } from "@/lib/client";
 import { useSearchRef } from "@/lib/hooks";
 import { Info } from "@/app/components/table";
@@ -132,10 +132,7 @@ export default function BinClient({ initialRows }: { initialRows?: BinRow[] }) {
         <div className="sticky top-16 z-10 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-3 pb-2 border-b mb-4"
           style={{ background: "var(--header)", borderColor: "var(--border)" }}>
           <div className="relative max-w-2xl mx-auto">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--muted)" }}>
-              <Search className="text-lg" />
-            </span>
-            <input className="field pl-10 pr-10 h-11" placeholder={t.bin.searchPh}
+            <input className="field pr-10 h-11" placeholder={t.bin.searchPh}
               value={search}
               onChange={(e) => {
                 const v = e.target.value;
