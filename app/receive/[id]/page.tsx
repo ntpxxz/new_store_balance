@@ -306,6 +306,7 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
           <p className="text-sm" style={{ color: "#9aa4b2" }}>Enter the DO number exactly as printed on the document.</p>
           <input
             className="field"
+            style={{ color: "#000" }}
             placeholder={`e.g. ${doNo}`}
             value={manualValue}
             onChange={(e) => { setManualValue(e.target.value); setManualErr(""); }}
