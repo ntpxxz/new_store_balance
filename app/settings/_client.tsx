@@ -48,7 +48,7 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
   const update = (u: UserRow, body: Parameters<typeof api.updateUser>[1], ok = L("Saved", "บันทึกแล้ว")) =>
     run(u.id, async () => {
       const saved = await api.updateUser(u.id, body);
-      setUsers(us => us.map(x => (x.id === saved.id ? saved : x)));
+      setUsers(us => us.map(x => (x.id === saved.id ? saved : x)).sort((a, b) => a.username.localeCompare(b.username)));
     }, ok);
 
   const toggleActive = (u: UserRow) => {
@@ -192,9 +192,14 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
       {/* Edit user */}
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={L("Edit user", "แก้ไขผู้ใช้")}>
         {editing && (
-          <EditUserForm L={L} user={editing} busy={pending === editing.id} onCancel={() => setEditing(null)}
+          <EditUserForm L={L} user={editing} isSelf={editing.id === meId} busy={pending === editing.id} onCancel={() => setEditing(null)}
             onSubmit={async form => {
-              if (await update(editing, { username: form.username, empId: form.empId.trim() || null })) setEditing(null);
+              // only send what changed — a bare `username` triggers a session-kick on the backend
+              const body: Parameters<typeof api.updateUser>[1] = {};
+              if (form.username !== editing.username) body.username = form.username;
+              const empId = form.empId.trim() || null;
+              if (empId !== (editing.empId ?? null)) body.empId = empId;
+              if (await update(editing, body)) setEditing(null);
             }} />
         )}
       </Sheet>
@@ -307,11 +312,12 @@ function AddUserForm({ L, busy, onCancel, onSubmit }: { L: LFn; busy: boolean; o
   );
 }
 
-function EditUserForm({ L, user, busy, onCancel, onSubmit }: {
-  L: LFn; user: UserRow; busy: boolean; onCancel: () => void; onSubmit: (f: { username: string; empId: string }) => void;
+function EditUserForm({ L, user, isSelf, busy, onCancel, onSubmit }: {
+  L: LFn; user: UserRow; isSelf: boolean; busy: boolean; onCancel: () => void; onSubmit: (f: { username: string; empId: string }) => void;
 }) {
   const [form, setForm] = useState({ username: user.username, empId: user.empId ?? "" });
-  const unchanged = form.username === user.username && form.empId === (user.empId ?? "");
+  const nameChanged = form.username !== user.username;
+  const unchanged = !nameChanged && form.empId === (user.empId ?? "");
   return (
     <form className="space-y-3" onSubmit={e => { e.preventDefault(); onSubmit(form); }}>
       <Field label={L("Username", "ชื่อผู้ใช้")}>
@@ -322,9 +328,13 @@ function EditUserForm({ L, user, busy, onCancel, onSubmit }: {
         <input className="field" autoComplete="off"
           value={form.empId} onChange={e => setForm({ ...form, empId: e.target.value })} />
       </Field>
-      <p className="text-xs" style={{ color: "var(--muted)" }}>
-        {L("Changing the username will log them out of all devices.", "เปลี่ยนชื่อผู้ใช้จะทำให้ผู้ใช้ถูกออกจากระบบทุกเครื่อง")}
-      </p>
+      {nameChanged && (
+        <p className="text-xs" style={{ color: "var(--warn-fg)" }}>
+          {isSelf
+            ? L("You will be logged out of all devices after saving.", "คุณจะถูกออกจากระบบทุกเครื่องหลังบันทึก")
+            : L(`${user.username} will be logged out of all devices after saving.`, `${user.username} จะถูกออกจากระบบทุกเครื่องหลังบันทึก`)}
+        </p>
+      )}
       <div className="flex gap-2 pt-2">
         <button type="button" className="btn btn-ghost flex-1" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
         <button className="btn btn-primary flex-1" disabled={busy || unchanged}>{busy ? L("Saving…", "กำลังบันทึก…") : L("Save", "บันทึก")}</button>
