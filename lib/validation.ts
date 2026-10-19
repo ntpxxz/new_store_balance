@@ -97,6 +97,7 @@ export const userSelect = { id: true, username: true, empId: true, role: true, s
 
 // explicit, not createUserSchema.partial() — partial keeps role's default and would reset role to USER on every PATCH
 export const updateUserSchema = z.object({
+    username: z.string().min(2, 'Username must be at least 2 characters').optional(),
     password: z.string().min(4, 'Password must be at least 4 characters').optional(),
     empId: z.string().trim().min(1).optional().nullable(),
     role: z.enum(['ADMIN', 'SUPERVISOR', 'USER']).optional(),

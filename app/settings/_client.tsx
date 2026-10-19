@@ -30,6 +30,7 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
   const [toast, setToast] = useState<Toast>(null);
   const [adding, setAdding] = useState(false);
   const [pwFor, setPwFor] = useState<UserRow | null>(null);
+  const [editing, setEditing] = useState<UserRow | null>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -53,6 +54,15 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
   const toggleActive = (u: UserRow) => {
     if (u.isActive && !confirm(L(`Deactivate ${u.username}? They will be logged out immediately.`, `ปิดการใช้งาน ${u.username}? ผู้ใช้จะถูกออกจากระบบทันที`))) return;
     update(u, { isActive: !u.isActive }, u.isActive ? L("Deactivated", "ปิดการใช้งานแล้ว") : L("Activated", "เปิดการใช้งานแล้ว"));
+  };
+
+  const remove = (u: UserRow) => {
+    if (!confirm(L(`Delete ${u.username}? This cannot be undone. Their past tasks will remain but be unassigned.`,
+      `ลบ ${u.username}? การลบนี้ย้อนกลับไม่ได้ งานที่เคยทำไว้จะยังอยู่ แต่จะไม่มีผู้รับผิดชอบ`))) return;
+    run(u.id, async () => {
+      await api.deleteUser(u.id);
+      setUsers(us => us.filter(x => x.id !== u.id));
+    }, L(`Deleted ${u.username}`, `ลบ ${u.username} แล้ว`));
   };
 
   const q = query.trim().toLowerCase();
@@ -147,10 +157,19 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
                     </select>
                   </label>
 
-                  <button className="btn btn-ghost py-1.5 text-xs col-span-2 lg:col-span-1 lg:order-5" disabled={saving}
-                    onClick={() => setPwFor(u)}>
-                    {L("Reset password", "รีเซ็ตรหัสผ่าน")}
-                  </button>
+                  <div className="col-span-2 lg:col-span-1 lg:order-5 flex gap-1.5">
+                    <button className="btn btn-ghost py-1.5 text-xs flex-1" disabled={saving} onClick={() => setEditing(u)}>
+                      {L("Edit", "แก้ไข")}
+                    </button>
+                    <button className="btn btn-ghost py-1.5 text-xs flex-1" disabled={saving} onClick={() => setPwFor(u)}>
+                      {L("Password", "รหัสผ่าน")}
+                    </button>
+                    <button className="btn btn-ghost py-1.5 text-xs flex-1" disabled={saving || me}
+                      title={me ? L("You can't delete yourself", "ลบบัญชีตัวเองไม่ได้") : undefined}
+                      style={{ color: "var(--bad-fg)" }} onClick={() => remove(u)}>
+                      {L("Delete", "ลบ")}
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -168,6 +187,16 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
             }, L(`Added ${form.username}`, `เพิ่ม ${form.username} แล้ว`));
             if (ok) setAdding(false);
           }} />
+      </Sheet>
+
+      {/* Edit user */}
+      <Sheet open={!!editing} onClose={() => setEditing(null)} title={L("Edit user", "แก้ไขผู้ใช้")}>
+        {editing && (
+          <EditUserForm L={L} user={editing} busy={pending === editing.id} onCancel={() => setEditing(null)}
+            onSubmit={async form => {
+              if (await update(editing, { username: form.username, empId: form.empId.trim() || null })) setEditing(null);
+            }} />
+        )}
       </Sheet>
 
       {/* Reset password */}
@@ -273,6 +302,32 @@ function AddUserForm({ L, busy, onCancel, onSubmit }: { L: LFn; busy: boolean; o
       <div className="flex gap-2 pt-2">
         <button type="button" className="btn btn-ghost flex-1" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
         <button className="btn btn-primary flex-1" disabled={busy}>{busy ? L("Saving…", "กำลังบันทึก…") : L("Add user", "เพิ่มผู้ใช้")}</button>
+      </div>
+    </form>
+  );
+}
+
+function EditUserForm({ L, user, busy, onCancel, onSubmit }: {
+  L: LFn; user: UserRow; busy: boolean; onCancel: () => void; onSubmit: (f: { username: string; empId: string }) => void;
+}) {
+  const [form, setForm] = useState({ username: user.username, empId: user.empId ?? "" });
+  const unchanged = form.username === user.username && form.empId === (user.empId ?? "");
+  return (
+    <form className="space-y-3" onSubmit={e => { e.preventDefault(); onSubmit(form); }}>
+      <Field label={L("Username", "ชื่อผู้ใช้")}>
+        <input className="field" required minLength={2} autoComplete="off" autoFocus
+          value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
+      </Field>
+      <Field label={L("EmpID (optional)", "รหัสพนักงาน (ไม่บังคับ)")}>
+        <input className="field" autoComplete="off"
+          value={form.empId} onChange={e => setForm({ ...form, empId: e.target.value })} />
+      </Field>
+      <p className="text-xs" style={{ color: "var(--muted)" }}>
+        {L("Changing the username will log them out of all devices.", "เปลี่ยนชื่อผู้ใช้จะทำให้ผู้ใช้ถูกออกจากระบบทุกเครื่อง")}
+      </p>
+      <div className="flex gap-2 pt-2">
+        <button type="button" className="btn btn-ghost flex-1" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
+        <button className="btn btn-primary flex-1" disabled={busy || unchanged}>{busy ? L("Saving…", "กำลังบันทึก…") : L("Save", "บันทึก")}</button>
       </div>
     </form>
   );

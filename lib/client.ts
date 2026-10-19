@@ -215,8 +215,9 @@ export const api = {
   listUsers: () => req(`/api/users`) as Promise<UserRow[]>,
   createUser: (body: { username: string; password: string; empId?: string | null; role: string; section: string }) =>
     req(`/api/users`, { method: "POST", body: JSON.stringify(body) }) as Promise<UserRow>,
-  updateUser: (id: string, body: Partial<Pick<UserRow, "empId" | "role" | "section" | "isActive">> & { password?: string }) =>
+  updateUser: (id: string, body: Partial<Pick<UserRow, "username" | "empId" | "role" | "section" | "isActive">> & { password?: string }) =>
     req(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(body) }) as Promise<UserRow>,
+  deleteUser: (id: string) => req(`/api/users/${id}`, { method: "DELETE" }),
   getBin: (location: string, part?: string) =>
     req(`/api/bin-configs/${encodeURIComponent(location)}${part ? `?part=${encodeURIComponent(part)}` : ""}`) as Promise<BinDetail>,
   moveBinStock: (location: string, body: { action: "add" | "remove"; partNo: string; qty: number }) =>
