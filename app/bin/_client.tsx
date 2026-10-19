@@ -10,11 +10,11 @@ import { Info } from "@/app/components/table";
 import { useLang } from "@/lib/lang";
 
 type BinConfig = { id: string; location: string; maxCapacity: number; isLocked?: boolean };
-type SeatState = "unregistered" | "empty" | "occupied" | "full" | "locked";
+type SeatState = "empty" | "occupied" | "full";
 type LFn = (en: string, th: string) => string;
 
 const BLOCKS = ["A", "B", "C", "D"];
-const SEATS = Array.from({ length: 10 }, (_, i) => i + 1);
+const SEATS = Array.from({ length: 30 }, (_, i) => i + 1);
 const SHELF_KEY = "bin.shelf";
 
 // "A-01", "a1", "A 1" → "A1"; non-matching locations return null
@@ -28,20 +28,16 @@ const canonical = (block: string, n: number) => `${block}-${String(n).padStart(2
 const AVAILABLE_BORDER = "color-mix(in srgb, var(--primary) 45%, transparent)";
 const OCCUPIED_BG = "color-mix(in srgb, var(--muted) 12%, var(--card))";
 const SEAT_STYLE: Record<SeatState, React.CSSProperties> = {
-  unregistered: { background: "transparent", borderColor: "var(--border)", borderStyle: "dashed", color: "var(--muted)" },
-  empty:        { background: "var(--card)", borderColor: AVAILABLE_BORDER, color: "var(--primary)" },
-  occupied:     { background: OCCUPIED_BG, borderColor: "var(--border)", color: "var(--muted)" },
-  full:         { background: OCCUPIED_BG, borderColor: "var(--bad-fg)", color: "var(--bad-fg)" },
-  locked:       { background: OCCUPIED_BG, borderColor: "var(--border)", color: "var(--muted)", opacity: 0.6 },
+  empty:    { background: "var(--card)", borderColor: AVAILABLE_BORDER, color: "var(--primary)" },
+  occupied: { background: OCCUPIED_BG, borderColor: "var(--border)", color: "var(--muted)" },
+  full:     { background: OCCUPIED_BG, borderColor: "var(--bad-fg)", color: "var(--bad-fg)" },
 };
 
 function BinCard({ label, state, dimmed, alert, parts, qty, capacity, L, onClick }: {
   label: string; state: SeatState; dimmed: boolean; alert: boolean;
   parts: number; qty: number; capacity: number; L: LFn; onClick: () => void;
 }) {
-  const sub = state === "unregistered" ? L("Not registered", "ยังไม่ลงทะเบียน")
-    : state === "locked" ? L("Locked", "ล็อก")
-    : qty <= 0 ? L("Empty", "ว่าง")
+  const sub = qty <= 0 ? L("Empty", "ว่าง")
     : L(`${parts} part${parts === 1 ? "" : "s"}`, `${parts} รายการ`);
   const pct = capacity > 0 ? Math.min(100, (qty / capacity) * 100) : 0;
   return (
@@ -51,7 +47,7 @@ function BinCard({ label, state, dimmed, alert, parts, qty, capacity, L, onClick
       style={{ ...SEAT_STYLE[state], ...(alert ? { borderColor: "var(--bad-fg)", borderWidth: 2 } : {}), ...(dimmed ? { opacity: 0.25 } : {}) }}>
       {alert && <span title="AS400 qty ≠ bins total" className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full" style={{ background: "var(--bad-fg)" }} />}
       <Archive className="text-lg" />
-      <span className="text-xs font-bold" style={{ textDecoration: state === "locked" ? "line-through" : undefined }}>{label}</span>
+      <span className="text-xs font-bold">{label}</span>
       <span className="text-[10px] truncate max-w-full" style={{ color: "var(--muted)" }}>{sub}</span>
       {qty > 0 && (
         <span className="text-[10px] font-semibold tabular-nums" style={{ color: state === "full" ? "var(--bad-fg)" : "var(--text)" }}>
@@ -59,7 +55,7 @@ function BinCard({ label, state, dimmed, alert, parts, qty, capacity, L, onClick
         </span>
       )}
       {/* fill bar — only when the bin has a capacity */}
-      {capacity > 0 && state !== "unregistered" && (
+      {capacity > 0 && (
         <span className="absolute left-2 right-2 bottom-1.5 h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
           <span className="block h-full rounded-full"
             style={{ width: `${pct}%`, background: pct >= 100 ? "var(--bad-fg)" : pct >= 80 ? "var(--warn-fg)" : "var(--primary)" }} />
@@ -149,9 +145,8 @@ export default function BinClient({ initialRows, initialBins }: { initialRows?: 
         const bin = binByKey.get(key);
         const items = rowsByKey.get(key) ?? [];
         const qty = items.reduce((s, r) => s + (r.quantity || 0), 0);
-        let state: SeatState = "unregistered";
-        if (bin?.isLocked) state = "locked";
-        else if (bin) state = qty <= 0 ? "empty" : bin.maxCapacity > 0 && qty >= bin.maxCapacity ? "full" : "occupied";
+        const cap = bin?.maxCapacity ?? 0;
+        const state: SeatState = qty <= 0 ? "empty" : cap > 0 && qty >= cap ? "full" : "occupied";
         const seatAlert = items.some((r) => r.mismatch);
         seats.set(key, { bin, items, qty, state, alert: seatAlert });
         if (state === "occupied" || state === "full") used++;
@@ -276,7 +271,6 @@ export default function BinClient({ initialRows, initialBins }: { initialRows?: 
             <LegendItem state="empty" label={L("Available", "ว่าง")} />
             <LegendItem state="occupied" label={L("Occupied", "มีของ")} />
             <LegendItem state="full" label={L("Full", "เต็ม")} />
-            <LegendItem state="unregistered" label={L("Not registered", "ยังไม่ลงทะเบียน")} />
             <span className="flex items-center gap-[5px]">
               <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: "var(--bad-fg)" }} />
               {L("AS400 qty ≠ bins", "ยอด AS400 ≠ bin")}

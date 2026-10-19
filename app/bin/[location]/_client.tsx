@@ -3,7 +3,6 @@
 // Figma "Bin detail" + "Assign part to bin" / "Remove parts from bin" (mode toggles in place)
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import AppShell from "@/app/components/AppShell";
 import { Archive, Box, Circle, Scan, Plus, Minus, X } from "@/app/components/icons";
 import { api, type BinDetail } from "@/lib/client";
@@ -17,7 +16,6 @@ type LFn = (en: string, th: string) => string;
 const fmt = (n: number) => n.toLocaleString();
 
 export default function BinDetailClient({ location, initialData }: { location: string; initialData: BinDetail }) {
-  const router = useRouter();
   const { lang } = useLang();
   const L: LFn = (en, th) => (lang === "th" ? th : en);
   const [data, setData] = useState<BinDetail | null>(initialData);
@@ -43,9 +41,6 @@ export default function BinDetailClient({ location, initialData }: { location: s
   const rows = data?.rows ?? [];
   const total = rows.reduce((n, r) => n + r.quantity, 0);
   const mismatches = rows.filter((r) => r.as400Qty !== r.binsQty).length;
-  const status = !bin ? [L("Not registered", "ยังไม่ลงทะเบียน"), "var(--muted)", "var(--border)"]
-    : bin.isLocked ? [L("Locked", "ล็อก"), "var(--bad-fg)", "var(--bad-bg)"]
-    : [L("Active", "ใช้งาน"), "var(--ok-fg)", "var(--ok-bg)"];
   const last = rows.find((r) => r.latestUpdateDate);
   const cap = bin?.maxCapacity ?? 0;
   const pct = cap > 0 ? Math.min(100, (total / cap) * 100) : 0;
@@ -72,12 +67,9 @@ export default function BinDetailClient({ location, initialData }: { location: s
           <>
             {/* Bin summary */}
             <div className="card p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
                 <span className="flex items-center gap-2 text-lg font-bold" style={{ color: "var(--primary)" }}>
                   <Archive className="text-[22px]" /> RACK {location}
-                </span>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ color: status[1], background: status[2] }}>
-                  {status[0]}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -123,22 +115,10 @@ export default function BinDetailClient({ location, initialData }: { location: s
 
             {mode === "view" && (
               <>
-                {!bin && (
-                  <div className="card p-4 flex flex-col gap-3 text-center">
-                    <p className="text-sm" style={{ color: "var(--muted)" }}>
-                      {L(`${location} isn't registered yet. Register it to assign parts.`, `${location} ยังไม่ได้ลงทะเบียน ลงทะเบียนก่อนจึงจะเพิ่ม Part ได้`)}
-                    </p>
-                    <button type="button" disabled={busy} className="btn btn-primary"
-                      onClick={() => run(async () => { await api.addBinConfig(location); await load(); }, L(`${location} registered`, `ลงทะเบียน ${location} แล้ว`))}>
-                      {L(`Register ${location}`, `ลงทะเบียน ${location}`)}
-                    </button>
-                  </div>
-                )}
-
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold">{L("Assigned parts", "Part ใน Rack")} ({rows.length})</h3>
-                    {bin && rows.length > 0 && (
+                    {rows.length > 0 && (
                       <span className="text-xs" style={{ color: "var(--muted)" }}>{L("Tap a part to remove", "แตะ Part เพื่อนำออก")}</span>
                     )}
                   </div>
@@ -154,7 +134,7 @@ export default function BinDetailClient({ location, initialData }: { location: s
                       warn={r.as400Qty !== r.binsQty
                         ? `AS400 ${fmt(r.as400Qty)} ≠ ${L("all racks", "ทุก rack")} ${fmt(r.binsQty)} (${r.binsQty > r.as400Qty ? "+" : ""}${fmt(r.binsQty - r.as400Qty)})`
                         : undefined}
-                      onClick={bin ? () => { setRemovePart(r.partNo); setMode("remove"); } : undefined} />
+                      onClick={() => { setRemovePart(r.partNo); setMode("remove"); }} />
                   ))}
                   {last && (
                     <p className="text-[11px]" style={{ color: "var(--muted)" }}>
@@ -163,37 +143,20 @@ export default function BinDetailClient({ location, initialData }: { location: s
                   )}
                 </div>
 
-                {bin?.isLocked && <Info>{L("This rack is locked — parts can be removed but not added.", "Rack นี้ถูกล็อก นำออกได้ แต่เพิ่มไม่ได้")}</Info>}
-
-                {bin && (
-                  <FooterBar>
-                    {rows.length > 0 && (
-                      <button type="button" className="btn btn-ghost flex-1 h-11" onClick={() => setMode("remove")}>
-                        <Minus className="text-lg" /> {L("Remove", "นำออก")}
-                      </button>
-                    )}
-                    {!bin.isLocked && (
-                      <button type="button" className="btn btn-primary flex-1 h-11" onClick={() => setMode("add")}>
-                        <Plus className="text-lg" /> {L("Add Part", "เพิ่ม Part")}
-                      </button>
-                    )}
-                  </FooterBar>
-                )}
-
-                {/* destructive action kept out of the main flow */}
-                {bin && (
-                  <button type="button" disabled={busy}
-                    onClick={() => confirm(L(`Unregister rack "${location}"? Its stock rows stay in place.`, `ยกเลิกการลงทะเบียน "${location}"? ข้อมูลสต็อกยังอยู่`)) &&
-                      run(async () => { await api.deleteBinConfig(location); router.push("/bin"); }, L("Rack unregistered", "ยกเลิกการลงทะเบียนแล้ว"))}
-                    className="self-center text-xs font-medium underline underline-offset-2 disabled:opacity-50 py-2"
-                    style={{ color: "var(--bad-fg)" }}>
-                    {L("Unregister this rack", "ยกเลิกการลงทะเบียน Rack นี้")}
+                <FooterBar>
+                  {rows.length > 0 && (
+                    <button type="button" className="btn btn-ghost flex-1 h-11" onClick={() => setMode("remove")}>
+                      <Minus className="text-lg" /> {L("Remove", "นำออก")}
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-primary flex-1 h-11" onClick={() => setMode("add")}>
+                    <Plus className="text-lg" /> {L("Add Part", "เพิ่ม Part")}
                   </button>
-                )}
+                </FooterBar>
               </>
             )}
 
-            {mode === "add" && bin && (
+            {mode === "add" && (
               <AddPanel L={L} location={location} rows={rows} total={total} busy={busy}
                 onSubmit={(partNo, qty) => run(async () => {
                   await api.moveBinStock(location, { action: "add", partNo, qty });
@@ -201,7 +164,7 @@ export default function BinDetailClient({ location, initialData }: { location: s
                 }, L(`Added ${fmt(qty)} pcs of ${partNo}`, `เพิ่ม ${partNo} ${fmt(qty)} ชิ้นแล้ว`))} />
             )}
 
-            {mode === "remove" && bin && (
+            {mode === "remove" && (
               <RemovePanel L={L} location={location} rows={rows} busy={busy} initial={removePart}
                 onSubmit={(partNo, qty) => run(async () => {
                   await api.moveBinStock(location, { action: "remove", partNo, qty });

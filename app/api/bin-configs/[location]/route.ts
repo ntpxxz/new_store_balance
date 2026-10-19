@@ -29,10 +29,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ lo
   if (action !== 'add' && action !== 'remove') return createErrorResponse('action must be add or remove', 400);
   if (!partNo || !Number.isFinite(qty) || qty <= 0) return createErrorResponse('partNo and qty > 0 are required', 400);
 
-  const bin = await prisma.binConfig.findUnique({ where: { location } });
-  if (!bin) return createErrorResponse(`Bin ${location} is not registered`, 404);
-  if (bin.isLocked && action === 'add') return createErrorResponse(`Bin ${location} is locked`, 409);
-
   const updatedBy = authResult.user.username;
   try {
     await prisma.$transaction(async (tx) => {
