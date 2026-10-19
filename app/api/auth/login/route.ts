@@ -18,24 +18,14 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
-        // Accept either 'username' or 'email' field for the identifier
-        const username = body.username || body.email;
+        const empId = (body.empId || '').toString().trim();
         const password = body.password;
 
-        if (!username || !password) {
-            return NextResponse.json({ error: 'Username/Email and password are required' }, { status: 400 });
+        if (!empId || !password) {
+            return NextResponse.json({ error: 'EmpID and password are required' }, { status: 400 });
         }
 
-        // Try to find user by email OR username
-        // We use findFirst because 'email' might not be recognized as unique by some generated clients initially
-        const user = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { email: username }, // Check if input is email
-                    { username: username } // Check if input is username
-                ]
-            }
-        });
+        const user = await prisma.user.findFirst({ where: { empId } });
 
         if (user && user.isActive) { // deactivated users get the same "invalid credentials" response
             // Check if password matches (either hashed or plain text for migration)
@@ -101,7 +91,7 @@ export async function POST(request: NextRequest) {
                     token,
                     user: {
                         id: user.id,
-                        email: user.email,
+                        empId: user.empId,
                         username: user.username,
                         name: user.username, // Map username to name for frontend compatibility
                         role: user.role,

@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
 
 export interface AuthUser {
     id: string;
-    email: string | null;
+    empId: string | null;
     username: string;
     role: string;
 }
@@ -46,7 +46,7 @@ export async function verifyAuth(request: NextRequest): Promise<{ user: AuthUser
         return {
             user: {
                 id: session.user.id,
-                email: session.user.email,
+                empId: session.user.empId,
                 username: session.user.username,
                 role: session.user.role,
             },

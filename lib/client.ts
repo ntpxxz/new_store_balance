@@ -70,11 +70,11 @@ async function req(path: string, init: RequestInit = {}) {
   return json.data ?? json;
 }
 
-export async function login(username: string, password: string) {
+export async function login(empId: string, password: string) {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ empId, password }),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) throw new Error(json.error || json.message || "Login failed");
@@ -114,7 +114,7 @@ export type StockRow = {
 };
 
 export type UserRow = {
-  id: string; username: string; email: string | null; role: string; section: string; isActive: boolean; createdAt: string;
+  id: string; username: string; empId: string | null; role: string; section: string; isActive: boolean; createdAt: string;
 };
 
 export type BinDetail = {
@@ -213,9 +213,9 @@ export const api = {
   deleteBinConfig: (location: string) =>
     req(`/api/bin-configs/${encodeURIComponent(location)}`, { method: "DELETE" }),
   listUsers: () => req(`/api/users`) as Promise<UserRow[]>,
-  createUser: (body: { username: string; password: string; email?: string | null; role: string; section: string }) =>
+  createUser: (body: { username: string; password: string; empId?: string | null; role: string; section: string }) =>
     req(`/api/users`, { method: "POST", body: JSON.stringify(body) }) as Promise<UserRow>,
-  updateUser: (id: string, body: Partial<Pick<UserRow, "email" | "role" | "section" | "isActive">> & { password?: string }) =>
+  updateUser: (id: string, body: Partial<Pick<UserRow, "empId" | "role" | "section" | "isActive">> & { password?: string }) =>
     req(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(body) }) as Promise<UserRow>,
   getBin: (location: string, part?: string) =>
     req(`/api/bin-configs/${encodeURIComponent(location)}${part ? `?part=${encodeURIComponent(part)}` : ""}`) as Promise<BinDetail>,

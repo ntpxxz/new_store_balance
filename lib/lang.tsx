@@ -53,7 +53,7 @@ const T: Record<Lang, Translations> = {
       viewDetail: "view detail", detail: "detail", inspect: "Inspect",
       syncDone: "Sync Complete", syncFailed: "Sync Failed",
     },
-    login: { subtitle: "Receive Module — sign in", username: "Username", password: "Password", signin: "Sign in", signingIn: "Signing in…" },
+    login: { subtitle: "Receive Module — sign in", username: "EmpID", password: "Password", signin: "Sign in", signingIn: "Signing in…" },
     receive: {
       title: "Receive", tabPending: "Pending", tabIqc: "IQC", tabDone: "Done",
       searchPh: "Search invoice or vendor…", syncRange: "Sync range:", syncing: "Syncing…",
@@ -104,7 +104,7 @@ const T: Record<Lang, Translations> = {
       viewDetail: "ดูรายละเอียด", detail: "รายละเอียด", inspect: "ตรวจสอบ",
       syncDone: "ซิงค์สำเร็จ", syncFailed: "ซิงค์ล้มเหลว",
     },
-    login: { subtitle: "โมดูลรับสินค้า — เข้าสู่ระบบ", username: "ชื่อผู้ใช้", password: "รหัสผ่าน", signin: "เข้าสู่ระบบ", signingIn: "กำลังเข้าสู่ระบบ…" },
+    login: { subtitle: "โมดูลรับสินค้า — เข้าสู่ระบบ", username: "รหัสพนักงาน", password: "รหัสผ่าน", signin: "เข้าสู่ระบบ", signingIn: "กำลังเข้าสู่ระบบ…" },
     receive: {
       title: "รับสินค้า", tabPending: "รอรับ", tabIqc: "IQC", tabDone: "เสร็จสิ้น",
       searchPh: "ค้นหาใบแจ้งหนี้หรือผู้จัดจำหน่าย…", syncRange: "ช่วงเวลาซิงค์:", syncing: "กำลังซิงค์…",

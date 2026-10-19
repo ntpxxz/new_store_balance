@@ -86,19 +86,19 @@ export const createInvoiceSchema = z.object({
 export const createUserSchema = z.object({
     username: z.string().min(2, 'Username must be at least 2 characters'),
     password: z.string().min(4, 'Password must be at least 4 characters').optional(),
-    email: z.string().email('Invalid email address').optional().nullable(),
+    empId: z.string().trim().min(1).optional().nullable(),
     role: z.enum(['ADMIN', 'SUPERVISOR', 'USER']).default('USER'),
     section: z.enum(['IQC', 'WAREHOUSE', 'PRODUCTION', 'PLANNING', 'PURCHASING']).optional(),
     isActive: z.boolean().optional(),
 });
 
 // fields safe to return from /api/users (never password)
-export const userSelect = { id: true, username: true, email: true, role: true, section: true, isActive: true, createdAt: true };
+export const userSelect = { id: true, username: true, empId: true, role: true, section: true, isActive: true, createdAt: true };
 
 // explicit, not createUserSchema.partial() — partial keeps role's default and would reset role to USER on every PATCH
 export const updateUserSchema = z.object({
     password: z.string().min(4, 'Password must be at least 4 characters').optional(),
-    email: z.string().email('Invalid email address').optional().nullable(),
+    empId: z.string().trim().min(1).optional().nullable(),
     role: z.enum(['ADMIN', 'SUPERVISOR', 'USER']).optional(),
     section: z.enum(['IQC', 'WAREHOUSE', 'PRODUCTION', 'PLANNING', 'PURCHASING']).optional(),
     isActive: z.boolean().optional(),

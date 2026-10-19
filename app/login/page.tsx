@@ -65,7 +65,7 @@ export default function LoginPage() {
         <div className="text-xs mb-6" style={{ color: "var(--muted)" }}>{t.login.subtitle}</div>
 
         <label className="block text-sm font-medium mb-1">{t.login.username}</label>
-        <input className="field mb-4" value={username} onChange={(e) => setU(e.target.value)} autoFocus autoComplete="username" />
+        <input className="field mb-4" value={username} onChange={(e) => setU(e.target.value)} autoFocus autoComplete="username" inputMode="numeric" />
 
         <label className="block text-sm font-medium mb-1">{t.login.password}</label>
         <input className="field mb-4" type="password" value={password} onChange={(e) => setP(e.target.value)} autoComplete="current-password" />

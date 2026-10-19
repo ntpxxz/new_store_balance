@@ -12,7 +12,7 @@ const ROLES = ["ADMIN", "SUPERVISOR", "USER"];
 const SECTIONS = ["IQC", "WAREHOUSE", "PRODUCTION", "PLANNING", "PURCHASING"];
 // literal class strings — Tailwind cannot see classes built at runtime
 const COLS = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem_5rem_auto]";
-const EMPTY = { username: "", password: "", email: "", role: "USER", section: "IQC" };
+const EMPTY = { username: "", password: "", empId: "", role: "USER", section: "IQC" };
 const ROLE_STYLE: Record<string, { background: string; color: string }> = {
   ADMIN: { background: "var(--bad-bg)", color: "var(--bad-fg)" },
   SUPERVISOR: { background: "var(--warn-bg)", color: "var(--warn-fg)" },
@@ -56,7 +56,7 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
   };
 
   const q = query.trim().toLowerCase();
-  const shown = q ? users.filter(u => `${u.username} ${u.email ?? ""} ${u.role} ${u.section}`.toLowerCase().includes(q)) : users;
+  const shown = q ? users.filter(u => `${u.username} ${u.empId ?? ""} ${u.role} ${u.section}`.toLowerCase().includes(q)) : users;
   const activeCount = users.filter(u => u.isActive).length;
 
   return (
@@ -76,7 +76,7 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
         </div>
 
         <div className="relative">
-          <input className="field pr-9" placeholder={L("Search name, email, role, section", "ค้นหาชื่อ อีเมล role section")}
+          <input className="field pr-9" placeholder={L("Search name, EmpID, role, section", "ค้นหาชื่อ รหัสพนักงาน role section")}
             value={query} onChange={e => setQuery(e.target.value)} />
           {/* right side like /receive: magnifier when empty, clear when typing (filter is live) */}
           {query ? (
@@ -117,7 +117,7 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
                         {me && <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded align-middle"
                           style={{ background: "var(--primary-tint)", color: "var(--primary)" }}>{L("YOU", "คุณ")}</span>}
                       </div>
-                      <div className="text-xs truncate" style={{ color: "var(--muted)" }}>{u.email ?? L("No email", "ไม่มีอีเมล")}</div>
+                      <div className="text-xs truncate" style={{ color: "var(--muted)" }}>{u.empId ?? L("No EmpID", "ไม่มีรหัสพนักงาน")}</div>
                     </div>
                   </div>
 
@@ -163,7 +163,7 @@ export default function SettingsClient({ meId, initialUsers }: { meId: string; i
         <AddUserForm L={L} busy={pending === "new"} onCancel={() => setAdding(false)}
           onSubmit={async form => {
             const ok = await run("new", async () => {
-              const saved = await api.createUser({ ...form, email: form.email || null });
+              const saved = await api.createUser({ ...form, empId: form.empId.trim() || null });
               setUsers(us => [...us, saved].sort((a, b) => a.username.localeCompare(b.username)));
             }, L(`Added ${form.username}`, `เพิ่ม ${form.username} แล้ว`));
             if (ok) setAdding(false);
@@ -259,8 +259,8 @@ function AddUserForm({ L, busy, onCancel, onSubmit }: { L: LFn; busy: boolean; o
       <Field label={L("Password (min 4)", "รหัสผ่าน (อย่างน้อย 4 ตัว)")}>
         <PasswordInput required minLength={4} autoComplete="new-password" value={form.password} onChange={set("password")} />
       </Field>
-      <Field label={L("Email (optional)", "อีเมล (ไม่บังคับ)")}>
-        <input className="field" type="email" value={form.email} onChange={set("email")} />
+      <Field label={L("EmpID (optional)", "รหัสพนักงาน (ไม่บังคับ)")}>
+        <input className="field" autoComplete="off" value={form.empId} onChange={set("empId")} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Role">
