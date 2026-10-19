@@ -9,7 +9,7 @@ import { useLang } from "@/lib/lang";
 
 // must match createUserSchema / updateUserSchema in lib/validation.ts
 const ROLES = ["ADMIN", "SUPERVISOR", "USER"];
-const SECTIONS = ["IQC", "WAREHOUSE", "PRODUCTION", "PLANNING", "PURCHASING"];
+const SECTIONS = ["IQC", "PC/MC", "IT", "ADMIN"];
 // literal class strings — Tailwind cannot see classes built at runtime
 const COLS = "lg:grid-cols-[minmax(0,2fr)_9rem_9rem_5rem_auto]";
 const EMPTY = { username: "", password: "", empId: "", role: "USER", section: "IQC" };

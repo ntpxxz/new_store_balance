@@ -88,7 +88,7 @@ export const createUserSchema = z.object({
     password: z.string().min(4, 'Password must be at least 4 characters').optional(),
     empId: z.string().trim().min(1).optional().nullable(),
     role: z.enum(['ADMIN', 'SUPERVISOR', 'USER']).default('USER'),
-    section: z.enum(['IQC', 'WAREHOUSE', 'PRODUCTION', 'PLANNING', 'PURCHASING']).optional(),
+    section: z.enum(['IQC', 'PC/MC', 'IT', 'ADMIN']).optional(),
     isActive: z.boolean().optional(),
 });
 
@@ -100,7 +100,7 @@ export const updateUserSchema = z.object({
     password: z.string().min(4, 'Password must be at least 4 characters').optional(),
     empId: z.string().trim().min(1).optional().nullable(),
     role: z.enum(['ADMIN', 'SUPERVISOR', 'USER']).optional(),
-    section: z.enum(['IQC', 'WAREHOUSE', 'PRODUCTION', 'PLANNING', 'PURCHASING']).optional(),
+    section: z.enum(['IQC', 'PC/MC', 'IT', 'ADMIN']).optional(),
     isActive: z.boolean().optional(),
 });
 
