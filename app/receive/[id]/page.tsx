@@ -8,6 +8,13 @@ import { Barcode, QrScan, Check, ChevronLeft, X, Flask, Monitor } from "@/app/co
 import InvoiceCard from "@/app/components/InvoiceCard";
 import { api, getUser, type Task } from "@/lib/client";
 import { useAuthRedirect } from "@/lib/hooks";
+import { useLang } from "@/lib/lang";
+
+type LFn = (en: string, th: string) => string;
+function useL(): LFn {
+  const { lang } = useLang();
+  return (en, th) => (lang === "th" ? th : en);
+}
 
 type Stage = "receive" | "as400_pending" | "iqc" | "done" | "other";
 function stageOf(status: string): Stage {
@@ -21,6 +28,7 @@ function stageOf(status: string): Stage {
 export default function DetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const L = useL();
   const [task, setTask] = useState<Task | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState("");
@@ -52,9 +60,9 @@ export default function DetailPage() {
   }, [stage, load]);
 
   return (
-    <AppShell title="Invoice Detail" active="receive" showBack onRefresh={load}>
+    <AppShell title={L("Invoice Detail", "รายละเอียดใบแจ้งหนี้")} active="receive" showBack onRefresh={load}>
       <div className="max-w-4xl mx-auto flex flex-col gap-4">
-        {state === "loading" && <Card><p className="text-center text-sm" style={{ color: "var(--muted)" }}>Loading…</p></Card>}
+        {state === "loading" && <Card><p className="text-center text-sm" style={{ color: "var(--muted)" }}>{L("Loading…", "กำลังโหลด…")}</p></Card>}
         {state === "error" && <Card><p className="text-center text-sm" style={{ color: "var(--bad-fg)" }}>{error}</p></Card>}
 
         {state === "ok" && task && (
@@ -78,20 +86,21 @@ function Card({ children, className = "" }: any) {
 }
 
 function BreakdownTable({ task }: { task: Task }) {
+  const L = useL();
   const received = task.actualQty ?? 0;
-  const status = task.actualQty == null || task.actualQty === 0 ? ["badge-muted", "Pending"]
-    : received < task.planQty ? ["badge-warn", "Shortage"]
-    : ["badge-ok", "Verified"];
+  const status = task.actualQty == null || task.actualQty === 0 ? ["badge-muted", L("Pending", "รอรับ")]
+    : received < task.planQty ? ["badge-warn", L("Shortage", "ขาด")]
+    : ["badge-ok", L("Verified", "ตรงจำนวน")];
   return (
     <Card className="!p-0 overflow-hidden hidden lg:block">
       <table className="w-full text-sm">
         <thead style={{ background: "#f7f9fc" }}>
           <tr className="text-left" style={{ color: "var(--muted)" }}>
-            <th className="px-4 py-3 font-medium">Item #</th>
-            <th className="px-4 py-3 font-medium">Description</th>
-            <th className="px-4 py-3 font-medium text-right">Expected Qty</th>
-            <th className="px-4 py-3 font-medium text-right">Received Qty</th>
-            <th className="px-4 py-3 font-medium text-right pr-6">Status</th>
+            <th className="px-4 py-3 font-medium">{L("Item #", "ลำดับ")}</th>
+            <th className="px-4 py-3 font-medium">{L("Description", "รายละเอียด")}</th>
+            <th className="px-4 py-3 font-medium text-right">{L("Expected Qty", "จำนวนตามแผน")}</th>
+            <th className="px-4 py-3 font-medium text-right">{L("Received Qty", "รับได้")}</th>
+            <th className="px-4 py-3 font-medium text-right pr-6">{L("Status", "สถานะ")}</th>
           </tr>
         </thead>
         <tbody>
@@ -111,14 +120,15 @@ function BreakdownTable({ task }: { task: Task }) {
 }
 
 function WaitingAs400Panel() {
+  const L = useL();
   return (
     <Card className="text-center">
       <div className="text-3xl mb-3 flex justify-center animate-pulse" style={{ color: "var(--primary)" }}>
         <Monitor />
       </div>
-      <div className="font-bold">รอ RPA กรอกข้อมูลใน AS400</div>
+      <div className="font-bold">{L("Waiting for RPA to fill AS400", "รอ RPA กรอกข้อมูลใน AS400")}</div>
       <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-        ระบบกำลังส่งข้อมูลเข้า AS400 อัตโนมัติ — แจ้งเตือนจะโผล่ขึ้นมาเมื่อพร้อมให้ยืนยัน
+        {L("The system is sending data to AS400 automatically — a notification will appear when it's ready to confirm.", "ระบบกำลังส่งข้อมูลเข้า AS400 อัตโนมัติ — แจ้งเตือนจะโผล่ขึ้นมาเมื่อพร้อมให้ยืนยัน")}
       </p>
       <div className="mt-4 flex justify-center gap-1">
         {[0,1,2].map(i => (
@@ -132,6 +142,7 @@ function WaitingAs400Panel() {
 type CountMode = "qty" | "box";
 
 function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
+  const L = useL();
   const [mode, setMode] = useState<CountMode | null>(null);
   const [urgent, setUrgent] = useState(!!task.isUrgent);
   const [urgentReason, setUrgentReason] = useState("");
@@ -153,10 +164,10 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   const verify: { cls: string; label: string } | null = !countEntered
     ? null
     : counted === task.planQty
-      ? { cls: "badge-ok", label: "Match" }
+      ? { cls: "badge-ok", label: L("Match", "ตรงจำนวน") }
       : counted < task.planQty
-        ? { cls: "badge-warn", label: `Shortage — ${task.planQty - counted} short` }
-        : { cls: "badge-bad", label: `Over — ${counted - task.planQty} extra (not allowed)` };
+        ? { cls: "badge-warn", label: L(`Shortage — ${task.planQty - counted} short`, `ขาด ${task.planQty - counted} ชิ้น`) }
+        : { cls: "badge-bad", label: L(`Over — ${counted - task.planQty} extra (not allowed)`, `เกิน ${counted - task.planQty} ชิ้น (ไม่อนุญาต)`) };
   const overCount = countEntered && counted > task.planQty;
 
   async function confirm() {
@@ -181,27 +192,27 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
 
       {mode === null ? (
         <Card>
-          <div className="font-bold mb-1">Choose receive mode</div>
+          <div className="font-bold mb-1">{L("Choose receive mode", "เลือกวิธีรับสินค้า")}</div>
           <p className="text-sm mb-4" style={{ color: "var(--muted)" }}>
-            Verify total quantity, or scan each box individually.
+            {L("Verify total quantity, or scan each box individually.", "ตรวจจำนวนรวม หรือสแกนทีละกล่อง")}
           </p>
           <div className="grid gap-3 lg:grid-cols-2">
             <button className="card p-4 text-left hover:shadow-md transition-shadow"
               style={{ border: "1px solid var(--border)" }}
               onClick={() => setMode("qty")}>
-              <div className="font-semibold">Verify quantity only</div>
+              <div className="font-semibold">{L("Verify quantity only", "ตรวจจำนวนรวม")}</div>
               <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                Enter one total count — compare against expected {task.planQty}.
+                {L(`Enter one total count — compare against expected ${task.planQty}.`, `กรอกจำนวนรวม เทียบกับจำนวนตามแผน ${task.planQty}`)}
               </p>
             </button>
             <button className="card p-4 text-left opacity-60 cursor-not-allowed"
               style={{ border: "1px solid var(--border)" }}
-              disabled title="Coming soon">
+              disabled title={L("Coming soon", "เร็ว ๆ นี้")}>
               <div className="font-semibold">
-                Count by box <span className="badge badge-muted ml-1">Soon</span>
+                {L("Count by box", "นับทีละกล่อง")} <span className="badge badge-muted ml-1">{L("Soon", "เร็ว ๆ นี้")}</span>
               </div>
               <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                Scan each box QR (1/n), count contents, sum must equal {task.planQty}.
+                {L(`Scan each box QR (1/n), count contents, sum must equal ${task.planQty}.`, `สแกน QR แต่ละกล่อง (1/n) นับของในกล่อง รวมต้องเท่ากับ ${task.planQty}`)}
               </p>
             </button>
           </div>
@@ -209,29 +220,29 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
       ) : !scanned ? (
         <Card className="text-center">
           <button className="btn btn-ghost mb-3 text-xs" onClick={() => setMode(null)}>
-            ← Change mode
+            {L("← Change mode", "← เปลี่ยนวิธี")}
           </button>
-          <button className="btn btn-accent w-full" onClick={() => setScanning(true)} aria-label="Scan QR">
-            <QrScan className="text-lg" /> Scan
+          <button className="btn btn-accent w-full" onClick={() => setScanning(true)} aria-label={L("Scan QR", "สแกน QR")}>
+            <QrScan className="text-lg" /> {L("Scan", "สแกน")}
           </button>
         </Card>
       ) : (
         <Card>
           <div className="flex items-center gap-2 mb-4 font-bold">
-            <Check style={{ color: "var(--ok-fg)" }} /> Scan Verified
+            <Check style={{ color: "var(--ok-fg)" }} /> {L("Scan Verified", "สแกนสำเร็จ")}
           </div>
           <div className="grid lg:grid-cols-3 gap-4">
-            <Labeled label="Expected Qty">
+            <Labeled label={L("Expected Qty", "จำนวนตามแผน")}>
               <input className="field" value={task.planQty} readOnly />
             </Labeled>
-            <Labeled label="Counted Qty *">
+            <Labeled label={L("Counted Qty *", "นับได้ *")}>
               <input className="field" type="number" min={1} max={task.planQty} inputMode="numeric"
-                placeholder="Count box contents" value={countedQty}
+                placeholder={L("Count box contents", "นับของในกล่อง")} value={countedQty}
                 onChange={(e) => setCountedQty(e.target.value)} autoFocus />
             </Labeled>
-            <Labeled label="Store Bin (rack) *">
+            <Labeled label={L("Store Bin (rack) *", "Bin ที่เก็บ (rack) *")}>
               {/* ponytail: native datalist — pick a registered rack or scan/type it; server rejects unregistered */}
-              <input className="field" placeholder="e.g. A-01" list="rack-list" value={bin}
+              <input className="field" placeholder={L("e.g. A-01", "เช่น A-01")} list="rack-list" value={bin}
                 onChange={(e) => setBin(e.target.value)} required />
               <datalist id="rack-list">{racks.map((r) => <option key={r} value={r} />)}</datalist>
             </Labeled>
@@ -241,31 +252,31 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
               <span className={`badge ${verify.cls}`}>{verify.label}</span>
             </div>
           )}
-          <Labeled label="Note" className="mt-4">
+          <Labeled label={L("Note", "หมายเหตุ")} className="mt-4">
             <textarea className="field" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </Labeled>
           <label className="flex items-center gap-2 mt-4 text-sm">
             <input type="checkbox" checked={urgent} onChange={(e) => {
               if (e.target.checked) setShowUrgent(true);
               else { setUrgent(false); setUrgentReason(""); }
-            }} /> Mark urgent
+            }} /> {L("Mark urgent", "ทำเครื่องหมายเร่งด่วน")}
           </label>
           {urgent && urgentReason && (
             <p className="text-xs mt-1" style={{ color: "var(--bad-fg)" }}>
-              Reason: {urgentReason} · <button className="underline" onClick={() => setShowUrgent(true)}>edit</button>
+              {L("Reason", "เหตุผล")}: {urgentReason} · <button className="underline" onClick={() => setShowUrgent(true)}>{L("edit", "แก้ไข")}</button>
             </p>
           )}
           {showUrgent && (
             <div className="fixed inset-0 z-[60] grid place-items-center p-4" style={{ background: "rgba(0,0,0,.6)" }} onClick={() => setShowUrgent(false)}>
               <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-                <div className="font-bold">Urgent — reason required</div>
-                <p className="text-xs mt-1 mb-3" style={{ color: "var(--muted)" }}>Why is this receipt urgent?</p>
+                <div className="font-bold">{L("Urgent — reason required", "เร่งด่วน — ต้องระบุเหตุผล")}</div>
+                <p className="text-xs mt-1 mb-3" style={{ color: "var(--muted)" }}>{L("Why is this receipt urgent?", "ทำไมรับครั้งนี้ถึงเร่งด่วน?")}</p>
                 <textarea className="field" rows={3} autoFocus value={urgentReason}
-                  onChange={(e) => setUrgentReason(e.target.value)} placeholder="e.g. line stopped, needed for MO today" />
+                  onChange={(e) => setUrgentReason(e.target.value)} placeholder={L("e.g. line stopped, needed for MO today", "เช่น ไลน์หยุด ต้องใช้ MO วันนี้")} />
                 <div className="flex gap-3 mt-4">
-                  <button className="btn btn-ghost flex-1" onClick={() => setShowUrgent(false)}>Cancel</button>
+                  <button className="btn btn-ghost flex-1" onClick={() => setShowUrgent(false)}>{L("Cancel", "ยกเลิก")}</button>
                   <button className="btn btn-primary flex-1" disabled={!urgentReason.trim()}
-                    onClick={() => { setUrgent(true); setShowUrgent(false); }}>Save</button>
+                    onClick={() => { setUrgent(true); setShowUrgent(false); }}>{L("Save", "บันทึก")}</button>
                 </div>
               </div>
             </div>
@@ -273,7 +284,7 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
           {err && <div className="badge badge-bad mt-4 w-full justify-center py-1.5">{err}</div>}
           <button className="btn btn-primary w-full mt-5" onClick={confirm}
             disabled={busy || !bin.trim() || !countEntered || overCount}>
-            {busy ? "Saving…" : "Confirm & Register Receipt"}
+            {busy ? L("Saving…", "กำลังบันทึก…") : L("Confirm & Register Receipt", "ยืนยันและบันทึกการรับ")}
           </button>
         </Card>
       )}
@@ -284,6 +295,7 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
 function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
   doNo: string; itemDraw?: string | null; onConfirm: () => void; onCancel: () => void;
 }) {
+  const L = useL();
   const corners = ["top-4 left-4 border-t-2 border-l-2", "top-4 right-4 border-t-2 border-r-2",
     "bottom-4 left-4 border-b-2 border-l-2", "bottom-4 right-4 border-b-2 border-r-2"];
   const [result, setResult] = useState<{ ok: true } | { ok: false; reason: string } | null>(null);
@@ -305,7 +317,7 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
   function startReader() {
     if (!videoRef.current) return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCamErr("Camera requires HTTPS — use manual entry");
+      setCamErr(L("Camera requires HTTPS — use manual entry", "กล้องต้องใช้ HTTPS — กรุณากรอกด้วยตนเอง"));
       return;
     }
     import("@zxing/browser").then(({ BrowserMultiFormatReader }) => {
@@ -322,14 +334,14 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
           setResult({ ok: true });
         } else {
           setRetries(n => n + 1);
-          setResult({ ok: false, reason: `Scanned: "${decoded}" — expected: "${doNo}"` });
+          setResult({ ok: false, reason: L(`Scanned: "${decoded}" — expected: "${doNo}"`, `สแกนได้: "${decoded}" — คาดหวัง: "${doNo}"`) });
         }
       }).then(controls => {
         controlsRef.current = controls;
       }).catch((e: any) => {
-        setCamErr(e?.message ?? "Camera unavailable — use manual entry");
+        setCamErr(e?.message ?? L("Camera unavailable — use manual entry", "กล้องใช้งานไม่ได้ — กรุณากรอกด้วยตนเอง"));
       });
-    }).catch(() => setCamErr("Scanner unavailable — use manual entry"));
+    }).catch(() => setCamErr(L("Scanner unavailable — use manual entry", "สแกนเนอร์ใช้งานไม่ได้ — กรุณากรอกด้วยตนเอง")));
   }
 
   // start on mount, restart when result is dismissed (retry), stop on unmount
@@ -344,7 +356,7 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
       ? raw.slice(0, raw.indexOf(',')).replace(/[{}]/g, '').trim()
       : raw;
     if (norm(firstField) !== norm(doNo)) {
-      setManualErr(`Invoice number does not match. Expected: ${doNo}`);
+      setManualErr(L(`Invoice number does not match. Expected: ${doNo}`, `เลขใบแจ้งหนี้ไม่ตรง คาดหวัง: ${doNo}`));
       return;
     }
     onConfirm();
@@ -354,16 +366,16 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
     return (
       <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#0f1720", color: "#fff" }}>
         <div className="flex items-center gap-3 px-4 h-16 shrink-0" style={{ background: "var(--header)", color: "var(--text)" }}>
-          <button onClick={() => { setManual(false); setManualErr(""); }} aria-label="Back" className="text-xl -ml-1 p-1"><ChevronLeft /></button>
-          <h1 className="flex-1 text-center text-base font-bold">Manual Entry</h1>
+          <button onClick={() => { setManual(false); setManualErr(""); }} aria-label={L("Back", "ย้อนกลับ")} className="text-xl -ml-1 p-1"><ChevronLeft /></button>
+          <h1 className="flex-1 text-center text-base font-bold">{L("Manual Entry", "กรอกด้วยตนเอง")}</h1>
           <span className="w-6" />
         </div>
         <div className="flex-1 flex flex-col gap-4 px-4 py-8 max-w-md w-full mx-auto">
-          <p className="text-sm" style={{ color: "#9aa4b2" }}>Enter the DO number exactly as printed on the document.</p>
+          <p className="text-sm" style={{ color: "#9aa4b2" }}>{L("Enter the DO number exactly as printed on the document.", "กรอกเลข DO ให้ตรงกับที่พิมพ์บนเอกสาร")}</p>
           <input
             className="field"
             style={{ color: "#000" }}
-            placeholder={`e.g. ${doNo}`}
+            placeholder={L(`e.g. ${doNo}`, `เช่น ${doNo}`)}
             value={manualValue}
             onChange={(e) => { setManualValue(e.target.value); setManualErr(""); }}
             onKeyDown={(e) => e.key === "Enter" && submitManual()}
@@ -371,9 +383,9 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
           />
           {manualErr && <p className="text-sm" style={{ color: "var(--bad-fg)" }}>{manualErr}</p>}
           <button className="btn btn-primary w-full mt-2" onClick={submitManual} disabled={!manualValue.trim()}>
-            Confirm
+            {L("Confirm", "ยืนยัน")}
           </button>
-          <button className="btn btn-ghost w-full" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-ghost w-full" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
         </div>
       </div>
     );
@@ -382,8 +394,8 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#0f1720", color: "#fff" }}>
       <div className="flex items-center gap-3 px-4 h-16 shrink-0" style={{ background: "var(--header)", color: "var(--text)" }}>
-        <button onClick={onCancel} aria-label="Back" className="text-xl -ml-1 p-1"><ChevronLeft /></button>
-        <h1 className="flex-1 text-center text-base font-bold">Scan QR / Barcode</h1>
+        <button onClick={onCancel} aria-label={L("Back", "ย้อนกลับ")} className="text-xl -ml-1 p-1"><ChevronLeft /></button>
+        <h1 className="flex-1 text-center text-base font-bold">{L("Scan QR / Barcode", "สแกน QR / บาร์โค้ด")}</h1>
         <span className="w-6" />
       </div>
       <div className="flex-1 overflow-auto px-4 py-5 flex flex-col gap-4 max-w-md w-full mx-auto">
@@ -397,28 +409,28 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
           )}
         </div>
         <p className="text-center text-sm" style={{ color: "#9aa4b2" }}>
-          {camErr ? camErr : "Point camera at the invoice barcode or QR code — scanning automatically"}
+          {camErr ? camErr : L("Point camera at the invoice barcode or QR code — scanning automatically", "ส่องกล้องไปที่บาร์โค้ดหรือ QR บนใบแจ้งหนี้ — สแกนอัตโนมัติ")}
         </p>
         {retries > 0 && !tooManyRetries && (
           <p className="text-center text-xs" style={{ color: "var(--warn-fg)" }}>
-            {MAX_RETRIES - retries} attempt{MAX_RETRIES - retries !== 1 ? "s" : ""} remaining
+            {L(`${MAX_RETRIES - retries} attempt${MAX_RETRIES - retries !== 1 ? "s" : ""} remaining`, `เหลืออีก ${MAX_RETRIES - retries} ครั้ง`)}
           </p>
         )}
         {!camErr && !tooManyRetries && (
           <div className="flex items-center justify-center gap-2 text-sm" style={{ color: "#9aa4b2" }}>
             <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--accent)" }} />
-            Scanning…
+            {L("Scanning…", "กำลังสแกน…")}
           </div>
         )}
         <div className="flex gap-3 mt-auto">
           <button className="btn btn-primary flex-1" onClick={() => { stopReader(); setManual(true); }}>
-            <Barcode /> Enter Manually
+            <Barcode /> {L("Enter Manually", "กรอกด้วยตนเอง")}
           </button>
-          <button className="btn btn-ghost flex-1" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-ghost flex-1" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
         </div>
         {tooManyRetries && (
           <p className="text-center text-sm" style={{ color: "var(--bad-fg)" }}>
-            Too many failed attempts. Please contact a supervisor.
+            {L("Too many failed attempts. Please contact a supervisor.", "สแกนผิดเกินกำหนด กรุณาติดต่อหัวหน้างาน")}
           </p>
         )}
       </div>
@@ -431,28 +443,28 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
             {result.ok ? (
               <>
                 <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--ok-fg)" }}><Check /></div>
-                <div className="font-bold text-lg" style={{ color: "var(--ok-fg)" }}>Scan Successful</div>
-                <div className="text-sm mt-2" style={{ color: "var(--muted)" }}>DO No: {doNo}</div>
-                {itemDraw && <div className="text-sm mb-5" style={{ color: "var(--muted)" }}>Drawing: {itemDraw}</div>}
+                <div className="font-bold text-lg" style={{ color: "var(--ok-fg)" }}>{L("Scan Successful", "สแกนสำเร็จ")}</div>
+                <div className="text-sm mt-2" style={{ color: "var(--muted)" }}>{L("DO No", "เลข DO")}: {doNo}</div>
+                {itemDraw && <div className="text-sm mb-5" style={{ color: "var(--muted)" }}>{L("Drawing", "แบบ")}: {itemDraw}</div>}
                 {!itemDraw && <div className="mb-5" />}
-                <button className="btn w-full mb-2" style={{ background: "#16a34a", color: "#fff" }} onClick={onConfirm}>Confirm</button>
-                <button className="btn btn-ghost w-full" onClick={() => setResult(null)}>Scan again</button>
+                <button className="btn w-full mb-2" style={{ background: "#16a34a", color: "#fff" }} onClick={onConfirm}>{L("Confirm", "ยืนยัน")}</button>
+                <button className="btn btn-ghost w-full" onClick={() => setResult(null)}>{L("Scan again", "สแกนอีกครั้ง")}</button>
               </>
             ) : (
               <>
                 <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--bad-fg)" }}><X /></div>
-                <div className="font-bold text-lg" style={{ color: "var(--bad-fg)" }}>Scan Failed</div>
+                <div className="font-bold text-lg" style={{ color: "var(--bad-fg)" }}>{L("Scan Failed", "สแกนไม่สำเร็จ")}</div>
                 <div className="text-sm mt-2 mb-5" style={{ color: "var(--muted)" }}>{result.reason}</div>
                 {tooManyRetries ? (
                   <>
-                    <button className="btn btn-primary w-full mb-2" onClick={() => { setResult(null); setManual(true); }}>Enter Manually</button>
-                    <button className="btn btn-ghost w-full" onClick={onCancel}>Cancel</button>
+                    <button className="btn btn-primary w-full mb-2" onClick={() => { setResult(null); setManual(true); }}>{L("Enter Manually", "กรอกด้วยตนเอง")}</button>
+                    <button className="btn btn-ghost w-full" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
                   </>
                 ) : (
                   <>
-                    <button className="btn w-full mb-2" style={{ background: "#ef4444", color: "#fff" }} onClick={() => setResult(null)}>Retry</button>
-                    <button className="btn btn-ghost w-full mb-2" onClick={() => { setResult(null); setManual(true); }}>Enter Manually</button>
-                    <button className="btn btn-ghost w-full" onClick={onCancel}>Cancel</button>
+                    <button className="btn w-full mb-2" style={{ background: "#ef4444", color: "#fff" }} onClick={() => setResult(null)}>{L("Retry", "ลองใหม่")}</button>
+                    <button className="btn btn-ghost w-full mb-2" onClick={() => { setResult(null); setManual(true); }}>{L("Enter Manually", "กรอกด้วยตนเอง")}</button>
+                    <button className="btn btn-ghost w-full" onClick={onCancel}>{L("Cancel", "ยกเลิก")}</button>
                   </>
                 )}
               </>
@@ -465,6 +477,7 @@ function ScanOverlay({ doNo, itemDraw, onConfirm, onCancel }: {
 }
 
 function IqcPanel({ task, onDone }: { task: Task; onDone: () => void }) {
+  const L = useL();
   const total = task.actualQty ?? 0;
   const [passedQty, setPassedQty] = useState(String(total));
   const [defectReason, setDefectReason] = useState("");
@@ -491,26 +504,26 @@ function IqcPanel({ task, onDone }: { task: Task; onDone: () => void }) {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-4 font-bold">
-        <Flask style={{ color: "var(--primary)" }} /> IQC Inspection
+        <Flask style={{ color: "var(--primary)" }} /> {L("IQC Inspection", "ตรวจสอบ IQC")}
       </div>
       <div className="grid lg:grid-cols-3 gap-4">
-        <Labeled label="Total Received">
+        <Labeled label={L("Total Received", "รับทั้งหมด")}>
           <input className="field" value={total} readOnly />
         </Labeled>
-        <Labeled label="Passed Qty">
+        <Labeled label={L("Passed Qty", "ผ่าน")}>
           <input className="field" type="number" min={0} max={total}
             value={passedQty} onChange={(e) => setPassedQty(e.target.value)} />
         </Labeled>
-        <Labeled label="Failed Qty">
+        <Labeled label={L("Failed Qty", "ไม่ผ่าน")}>
           <input className="field" value={failed} readOnly />
         </Labeled>
       </div>
-      <Labeled label="Defect Reason" className="mt-4">
+      <Labeled label={L("Defect Reason", "เหตุผลที่ไม่ผ่าน")} className="mt-4">
         <textarea className="field" rows={2} value={defectReason}
           onChange={(e) => setDefectReason(e.target.value)}
-          placeholder="Required when failing" />
+          placeholder={L("Required when failing", "ต้องระบุเมื่อไม่ผ่าน")} />
       </Labeled>
-      <Labeled label="Inspector" className="mt-4">
+      <Labeled label={L("Inspector", "ผู้ตรวจสอบ")} className="mt-4">
         <input className="field" value={inspector} onChange={(e) => setInspector(e.target.value)} />
       </Labeled>
       {err && <div className="badge badge-bad mt-4 w-full justify-center py-1.5">{err}</div>}
@@ -518,12 +531,12 @@ function IqcPanel({ task, onDone }: { task: Task; onDone: () => void }) {
         <button className="btn flex-1 font-semibold" disabled={busy}
           style={{ background: "#16a34a", color: "#fff" }}
           onClick={() => submit("PASS")}>
-          {busy ? "…" : "Pass"}
+          {busy ? "…" : L("Pass", "ผ่าน")}
         </button>
         <button className="btn flex-1 font-semibold" disabled={busy || !defectReason.trim()}
           style={{ background: "#dc2626", color: "#fff" }}
           onClick={() => submit("FAIL")}>
-          {busy ? "…" : "Fail"}
+          {busy ? "…" : L("Fail", "ไม่ผ่าน")}
         </button>
       </div>
     </Card>
@@ -531,15 +544,16 @@ function IqcPanel({ task, onDone }: { task: Task; onDone: () => void }) {
 }
 
 function DonePanel({ task }: { task: Task }) {
+  const L = useL();
   const failed = task.status === "REJECTED" || task.judgment === "FAIL";
   if (failed) {
     return (
       <Card className="text-center">
         <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--bad-fg)" }}><X /></div>
-        <div className="font-bold" style={{ color: "var(--bad-fg)" }}>IQC Failed</div>
+        <div className="font-bold" style={{ color: "var(--bad-fg)" }}>{L("IQC Failed", "IQC ไม่ผ่าน")}</div>
         <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-          Rejected{task.failedQty != null ? ` — ${task.failedQty} pcs failed` : ""}.
-          {task.defectReason ? ` Reason: ${task.defectReason}` : ""}
+          {L("Rejected", "ถูกปฏิเสธ")}{task.failedQty != null ? L(` — ${task.failedQty} pcs failed`, ` — ไม่ผ่าน ${task.failedQty} ชิ้น`) : ""}.
+          {task.defectReason ? L(` Reason: ${task.defectReason}`, ` เหตุผล: ${task.defectReason}`) : ""}
         </p>
       </Card>
     );
@@ -548,11 +562,11 @@ function DonePanel({ task }: { task: Task }) {
   return (
     <Card className="text-center">
       <div className="text-4xl mb-2 flex justify-center" style={{ color: "var(--ok-fg)" }}><Check /></div>
-      <div className="font-bold">{stored ? "Completed" : "IQC Passed — Done"}</div>
+      <div className="font-bold">{stored ? L("Completed", "เสร็จสิ้น") : L("IQC Passed — Done", "IQC ผ่าน — เสร็จสิ้น")}</div>
       <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
         {stored
-          ? <>Stored in rack <Link href={`/bin/${encodeURIComponent(task.targetLocation!)}`} className="font-bold underline">{task.targetLocation}</Link>. AS400 queue row written.</>
-          : <>Passed IQC ({task.passedQty ?? task.actualQty} pcs). Receipt complete — AS400 queue updated.</>}
+          ? <>{L("Stored in rack", "เก็บเข้า rack")} <Link href={`/bin/${encodeURIComponent(task.targetLocation!)}`} className="font-bold underline">{task.targetLocation}</Link>. {L("AS400 queue row written.", "บันทึกคิว AS400 แล้ว")}</>
+          : <>{L(`Passed IQC (${task.passedQty ?? task.actualQty} pcs). Receipt complete — AS400 queue updated.`, `IQC ผ่าน (${task.passedQty ?? task.actualQty} ชิ้น) การรับเสร็จสิ้น — อัปเดตคิว AS400 แล้ว`)}</>}
       </p>
     </Card>
   );

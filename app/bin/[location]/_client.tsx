@@ -130,7 +130,7 @@ export default function BinDetailClient({ location, initialData }: { location: s
                   )}
                   {rows.map((r) => (
                     <PartCard key={r.id} icon={<Box className="text-2xl" />} partNo={r.partNo} partName={r.partName}
-                      qty={`${fmt(r.quantity)} pcs`}
+                      qty={L(`${fmt(r.quantity)} pcs`, `${fmt(r.quantity)} ชิ้น`)}
                       warn={r.as400Qty !== r.binsQty
                         ? `AS400 ${fmt(r.as400Qty)} ≠ ${L("all racks", "ทุก rack")} ${fmt(r.binsQty)} (${r.binsQty > r.as400Qty ? "+" : ""}${fmt(r.binsQty - r.as400Qty)})`
                         : undefined}
@@ -213,7 +213,7 @@ function AddPanel({ L, location, rows, total, busy, onSubmit }: {
     <>
       <Section title={L("Select part", "เลือก Part")} hint={L("Search or scan a part", "ค้นหาหรือสแกน Part")}>
         <div className="relative">
-          <input className="field pr-10 h-11" placeholder="Part no." autoFocus enterKeyHint="search" value={search}
+          <input className="field pr-10 h-11" placeholder={L("Part no.", "รหัสชิ้นส่วน")} autoFocus enterKeyHint="search" value={search}
             onChange={(e) => { setSearch(e.target.value); setCands(null); }} onKeyDown={(e) => e.key === "Enter" && find()} />
           <button type="button" onClick={find} aria-label={L("Search part", "ค้นหา Part")} disabled={finding}
             className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5" style={{ color: "var(--primary)" }}>
@@ -248,7 +248,7 @@ function AddPanel({ L, location, rows, total, busy, onSubmit }: {
             <p className="text-xs font-semibold" style={{ color: "var(--muted)" }}>{L("AFTER ASSIGNMENT", "หลังเพิ่ม")}</p>
             <div className="flex justify-between text-[13px]">
               <span style={{ color: "var(--muted)" }}>RACK {location} · {rows.length + (isNew ? 1 : 0)} {L("parts", "รายการ")}</span>
-              <strong style={{ color: "var(--primary)" }}>{fmt(total + qty)} pcs</strong>
+              <strong style={{ color: "var(--primary)" }}>{fmt(total + qty)} {L("pcs", "ชิ้น")}</strong>
             </div>
           </Preview>
           <FooterBar>
@@ -297,7 +297,7 @@ function RemovePanel({ L, location, rows, busy, initial, onSubmit }: {
           <Preview>
             <div className="flex justify-between">
               <span className="text-[13px]" style={{ color: "var(--muted)" }}>{L(`Remaining in RACK ${location}`, `คงเหลือใน RACK ${location}`)}</span>
-              <strong className="text-sm" style={{ color: "var(--primary)" }}>{fmt(pick.quantity - qty)} pcs</strong>
+              <strong className="text-sm" style={{ color: "var(--primary)" }}>{fmt(pick.quantity - qty)} {L("pcs", "ชิ้น")}</strong>
             </div>
             <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
               {L(`${fmt(qty)} pcs taken off this rack. AS400 stock is not affected.`, `นำออก ${fmt(qty)} ชิ้นจาก rack นี้ สต็อก AS400 ไม่เปลี่ยน`)}
@@ -374,17 +374,17 @@ function Stepper({ L, value, max, onChange }: { L: LFn; value: number; max: numb
   return (
     <div className="flex flex-col gap-2">
       <div className="card h-14 px-1.5 flex items-center justify-between" style={{ borderColor: "var(--primary)" }}>
-        <button type="button" aria-label="Decrease" className={btn} disabled={value <= 0} onClick={() => set(value - 1)} style={{ color: "var(--primary)" }}>
+        <button type="button" aria-label={L("Decrease", "ลด")} className={btn} disabled={value <= 0} onClick={() => set(value - 1)} style={{ color: "var(--primary)" }}>
           <Minus className="text-xl" />
         </button>
         <span className="flex items-baseline gap-1">
           <input type="number" inputMode="numeric" min={0} max={max} value={value}
             onChange={(e) => set(Number(e.target.value))} onFocus={(e) => e.target.select()}
             className="w-24 text-center text-2xl font-bold tabular-nums bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-            aria-label="Quantity" />
-          <span className="text-[13px]" style={{ color: "var(--muted)" }}>pcs</span>
+            aria-label={L("Quantity", "จำนวน")} />
+          <span className="text-[13px]" style={{ color: "var(--muted)" }}>{L("pcs", "ชิ้น")}</span>
         </span>
-        <button type="button" aria-label="Increase" className={btn} disabled={value >= max} onClick={() => set(value + 1)} style={{ color: "var(--primary)" }}>
+        <button type="button" aria-label={L("Increase", "เพิ่ม")} className={btn} disabled={value >= max} onClick={() => set(value + 1)} style={{ color: "var(--primary)" }}>
           <Plus className="text-xl" />
         </button>
       </div>

@@ -39,7 +39,7 @@ export default function LoginPage() {
       await login(username.trim(), password);
       router.replace("/receive");
     } catch (e: any) {
-      setErr(e.message || "Login failed");
+      setErr(e.message || (lang === "th" ? "เข้าสู่ระบบไม่สำเร็จ" : "Login failed"));
     } finally {
       setBusy(false);
     }
