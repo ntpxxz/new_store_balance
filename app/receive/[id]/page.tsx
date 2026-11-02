@@ -129,12 +129,16 @@ function WaitingAs400Panel() {
   );
 }
 
+type CountMode = "qty" | "box";
+
 function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
+  const [mode, setMode] = useState<CountMode | null>(null);
   const [urgent, setUrgent] = useState(!!task.isUrgent);
   const [urgentReason, setUrgentReason] = useState("");
   const [showUrgent, setShowUrgent] = useState(false);
   const [note, setNote] = useState("");
   const [bin, setBin] = useState("");
+  const [countedQty, setCountedQty] = useState("");
   const [racks, setRacks] = useState<string[]>([]);
   useEffect(() => {
     api.listBinConfigs().then((b) => setRacks(b.filter((x) => !x.isLocked).map((x) => x.location))).catch(() => {});
@@ -144,13 +148,24 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  const counted = Number(countedQty);
+  const countEntered = countedQty !== "" && !isNaN(counted) && counted > 0;
+  const verify: { cls: string; label: string } | null = !countEntered
+    ? null
+    : counted === task.planQty
+      ? { cls: "badge-ok", label: "Match" }
+      : counted < task.planQty
+        ? { cls: "badge-warn", label: `Shortage — ${task.planQty - counted} short` }
+        : { cls: "badge-bad", label: `Over — ${counted - task.planQty} extra (not allowed)` };
+  const overCount = countEntered && counted > task.planQty;
+
   async function confirm() {
     setErr(""); setBusy(true);
     try {
       const finalNote = urgent
         ? `[URGENT] ${urgentReason}${note ? ` — ${note}` : ""}`
         : (note || undefined);
-      await api.receive(task.id, { receivedQty: task.planQty, isUrgent: urgent, note: finalNote, bin: bin || undefined });
+      await api.receive(task.id, { receivedQty: counted, isUrgent: urgent, note: finalNote, bin: bin || undefined });
       onDone(); // reload task → status=ARRIVED → WaitingAs400Panel shows, AppShell modal polls
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -164,8 +179,38 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
           onCancel={() => setScanning(false)} />
       )}
 
-      {!scanned ? (
+      {mode === null ? (
+        <Card>
+          <div className="font-bold mb-1">Choose receive mode</div>
+          <p className="text-sm mb-4" style={{ color: "var(--muted)" }}>
+            Verify total quantity, or scan each box individually.
+          </p>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <button className="card p-4 text-left hover:shadow-md transition-shadow"
+              style={{ border: "1px solid var(--border)" }}
+              onClick={() => setMode("qty")}>
+              <div className="font-semibold">Verify quantity only</div>
+              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                Enter one total count — compare against expected {task.planQty}.
+              </p>
+            </button>
+            <button className="card p-4 text-left opacity-60 cursor-not-allowed"
+              style={{ border: "1px solid var(--border)" }}
+              disabled title="Coming soon">
+              <div className="font-semibold">
+                Count by box <span className="badge badge-muted ml-1">Soon</span>
+              </div>
+              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+                Scan each box QR (1/n), count contents, sum must equal {task.planQty}.
+              </p>
+            </button>
+          </div>
+        </Card>
+      ) : !scanned ? (
         <Card className="text-center">
+          <button className="btn btn-ghost mb-3 text-xs" onClick={() => setMode(null)}>
+            ← Change mode
+          </button>
           <button className="btn btn-accent w-full" onClick={() => setScanning(true)} aria-label="Scan QR">
             <QrScan className="text-lg" /> Scan
           </button>
@@ -175,9 +220,14 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
           <div className="flex items-center gap-2 mb-4 font-bold">
             <Check style={{ color: "var(--ok-fg)" }} /> Scan Verified
           </div>
-          <div className="grid lg:grid-cols-2 gap-4">
-            <Labeled label="Received Qty">
+          <div className="grid lg:grid-cols-3 gap-4">
+            <Labeled label="Expected Qty">
               <input className="field" value={task.planQty} readOnly />
+            </Labeled>
+            <Labeled label="Counted Qty *">
+              <input className="field" type="number" min={1} max={task.planQty} inputMode="numeric"
+                placeholder="Count box contents" value={countedQty}
+                onChange={(e) => setCountedQty(e.target.value)} autoFocus />
             </Labeled>
             <Labeled label="Store Bin (rack) *">
               {/* ponytail: native datalist — pick a registered rack or scan/type it; server rejects unregistered */}
@@ -186,6 +236,11 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
               <datalist id="rack-list">{racks.map((r) => <option key={r} value={r} />)}</datalist>
             </Labeled>
           </div>
+          {verify && (
+            <div className="mt-3">
+              <span className={`badge ${verify.cls}`}>{verify.label}</span>
+            </div>
+          )}
           <Labeled label="Note" className="mt-4">
             <textarea className="field" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </Labeled>
@@ -216,7 +271,8 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
             </div>
           )}
           {err && <div className="badge badge-bad mt-4 w-full justify-center py-1.5">{err}</div>}
-          <button className="btn btn-primary w-full mt-5" onClick={confirm} disabled={busy || !bin.trim()}>
+          <button className="btn btn-primary w-full mt-5" onClick={confirm}
+            disabled={busy || !bin.trim() || !countEntered || overCount}>
             {busy ? "Saving…" : "Confirm & Register Receipt"}
           </button>
         </Card>
