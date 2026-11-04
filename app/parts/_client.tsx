@@ -18,7 +18,8 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error">(initialParts ? "ok" : "idle");
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [syncInfo, setSyncInfo] = useState<{ upsertedParts: number; upsertedStocks: number } | null>(null);
+  const [syncInfo, setSyncInfo] = useState<{ partCount: number; stockCount: number } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const load = useCallback(async () => {
     setLoadState("loading");
     try {
@@ -34,20 +35,24 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
   const [syncModal, setSyncModal] = useState(false);
 
   useEffect(() => {
-    if (!syncModal) return;
+    if (!syncModal || !syncInfo) return;
     const id = setTimeout(() => setSyncModal(false), 5000);
     return () => clearTimeout(id);
-  }, [syncModal]);
+  }, [syncModal, syncInfo]);
 
   const handleSync = useCallback(() => {
     setSyncing(true);
     setSyncInfo(null);
+    setSyncError(null);
     api.syncStock()
       .then((r) => {
-        setSyncInfo({ upsertedParts: r.upsertedParts, upsertedStocks: r.upsertedStocks });
+        setSyncInfo({ partCount: r.partCount, stockCount: r.stockCount });
         setSyncModal(true);
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        setSyncError(e?.message || "");
+        setSyncModal(true);
+      })
       .finally(() => { setSyncing(false); load(); });
   }, [load]);
 
@@ -155,26 +160,34 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
         )}
       </div>
       {/* ── Sync Result Modal ── */}
-      {syncModal && syncInfo && (
+      {syncModal && (syncInfo || syncError !== null) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.55)" }}
           onClick={e => { if (e.target === e.currentTarget) setSyncModal(false); }}>
           <div className="w-full max-w-sm rounded-xl shadow-2xl overflow-hidden"
             style={{ background: "var(--card)" }}>
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-              <span className="font-bold text-base">{t.common.syncDone}</span>
+              <span className="font-bold text-base" style={syncInfo ? undefined : { color: "var(--bad-fg)" }}>
+                {syncInfo ? t.common.syncDone : t.common.syncFailed}
+              </span>
               <button onClick={() => setSyncModal(false)} aria-label="Close"
                 className="text-xl leading-none p-1" style={{ color: "var(--muted)" }}>×</button>
             </div>
             <div className="px-5 py-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between text-sm">
-                <span style={{ color: "var(--muted)" }}>{t.parts.colPartNo}</span>
-                <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.upsertedParts}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span style={{ color: "var(--muted)" }}>{t.parts.colLocations}</span>
-                <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.upsertedStocks}</span>
-              </div>
+              {syncInfo ? (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span style={{ color: "var(--muted)" }}>{t.parts.colPartNo}</span>
+                    <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.partCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span style={{ color: "var(--muted)" }}>{t.parts.colLocations}</span>
+                    <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.stockCount}</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm break-words" style={{ color: "var(--bad-fg)" }}>{syncError || t.common.syncFailed}</p>
+              )}
             </div>
             <div className="px-5 pb-4">
               <button onClick={() => setSyncModal(false)}
