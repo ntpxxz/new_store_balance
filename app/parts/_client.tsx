@@ -177,11 +177,11 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
               {syncInfo ? (
                 <>
                   <div className="flex items-center justify-between text-sm">
-                    <span style={{ color: "var(--muted)" }}>{t.parts.colPartNo}</span>
+                    <span style={{ color: "var(--muted)" }}>{t.parts.syncedParts}</span>
                     <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.partCount}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span style={{ color: "var(--muted)" }}>{t.parts.colLocations}</span>
+                    <span style={{ color: "var(--muted)" }}>{t.parts.syncedLocations}</span>
                     <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.stockCount}</span>
                   </div>
                 </>
@@ -193,7 +193,7 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
               <button onClick={() => setSyncModal(false)}
                 className="w-full py-2.5 rounded-lg font-semibold text-sm"
                 style={{ background: "var(--primary)", color: "#fff" }}>
-                OK
+                {t.common.ok}
               </button>
             </div>
           </div>

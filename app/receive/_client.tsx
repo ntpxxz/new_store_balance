@@ -317,7 +317,7 @@ export default function ReceiveClient({
                   </div>
                   {syncInfo.sourceDuplicates > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "var(--muted)" }}>Duplicates merged</span>
+                      <span style={{ color: "var(--muted)" }}>{t.receive.dupMerged}</span>
                       <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.sourceDuplicates}</span>
                     </div>
                   )}
@@ -328,7 +328,7 @@ export default function ReceiveClient({
               <button onClick={() => setSyncModal(false)}
                 className="w-full py-2.5 rounded-lg font-semibold text-sm"
                 style={{ background: syncError ? "var(--error, #dc2626)" : "var(--primary)", color: "#fff" }}>
-                OK
+                {t.common.ok}
               </button>
             </div>
           </div>

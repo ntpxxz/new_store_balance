@@ -6,13 +6,14 @@ export type Lang = "en" | "th";
 export type Translations = {
   nav: { home: string; receive: string; parts: string; iqc: string; track: string; bin: string; subtitle: string };
   as400: { title: string; desc: string; items: (n: number) => string; waiting: string; confirm: string; cancel: string };
-  common: { loading: string; cancel: string; search: string; items: (n: number) => string; viewDetail: string; detail: string; inspect: string; syncDone: string; syncFailed: string };
+  common: { loading: string; cancel: string; search: string; items: (n: number) => string; viewDetail: string; detail: string; inspect: string; syncDone: string; syncFailed: string; ok: string };
   login: { subtitle: string; username: string; password: string; signin: string; signingIn: string };
   receive: {
     title: string; tabPending: string; tabIqc: string; tabDone: string; searchPh: string;
     syncRange: string; syncing: string; foundN: (n: number) => string; noPending: string;
     noItems: string; colId: string; colPartNo: string; colPartName: string; colVendor: string;
     colPo: string; colDate: string; colInvRcv: string; colQty: string; colActions: string; rcv: string;
+    dupMerged: string;
   };
   parts: {
     title: string; searchPh: string; criticalOnly: string; syncing: string;
@@ -20,6 +21,7 @@ export type Translations = {
     nParts: (n: number) => string; belowSafety: string; safety: string; loc: string;
     colPartNo: string; colName: string; colDivision: string; colUnit: string;
     colSafety: string; colOnHand: string; colLocations: string;
+    syncedParts: string; syncedLocations: string;
   };
   iqc: { title: string; searchPh: string; noItems: string; nWaiting: (n: number) => string; pcs: string };
   track: {
@@ -51,7 +53,7 @@ const T: Record<Lang, Translations> = {
       loading: "Loading…", cancel: "Cancel", search: "Search",
       items: (n) => `${n} item${n !== 1 ? "s" : ""}`,
       viewDetail: "view detail", detail: "detail", inspect: "Inspect",
-      syncDone: "Sync Complete", syncFailed: "Sync Failed",
+      syncDone: "Sync Complete", syncFailed: "Sync Failed", ok: "OK",
     },
     login: { subtitle: "Receive Module — sign in", username: "EmpID", password: "Password", signin: "Sign in", signingIn: "Signing in…" },
     receive: {
@@ -62,6 +64,7 @@ const T: Record<Lang, Translations> = {
       colId: "Inbound ID", colPartNo: "Part No.", colPartName: "Part Name",
       colVendor: "Vendor Code", colPo: "PO Number", colDate: "Date",
       colInvRcv: "Invoice / Received", colQty: "Qty", colActions: "Actions", rcv: "Rcv:",
+      dupMerged: "Duplicates merged",
     },
     parts: {
       title: "Parts", searchPh: "Part no, part name…", criticalOnly: "Critical only",
@@ -71,6 +74,7 @@ const T: Record<Lang, Translations> = {
       safety: "Safety:", loc: "Loc:",
       colPartNo: "Part No.", colName: "Name", colDivision: "Division", colUnit: "Unit",
       colSafety: "Safety Stock", colOnHand: "On Hand", colLocations: "Locations",
+      syncedParts: "Parts synced", syncedLocations: "Stock locations synced",
     },
     iqc: { title: "IQC Queue", searchPh: "Search part, invoice, vendor…", noItems: "No items waiting for IQC — all clear.", nWaiting: (n) => `${n} item${n !== 1 ? "s" : ""} waiting`, pcs: "pcs" },
     track: {
@@ -102,7 +106,7 @@ const T: Record<Lang, Translations> = {
       loading: "กำลังโหลด…", cancel: "ยกเลิก", search: "ค้นหา",
       items: (n) => `${n} รายการ`,
       viewDetail: "ดูรายละเอียด", detail: "รายละเอียด", inspect: "ตรวจสอบ",
-      syncDone: "ซิงค์สำเร็จ", syncFailed: "ซิงค์ล้มเหลว",
+      syncDone: "ซิงค์สำเร็จ", syncFailed: "ซิงค์ล้มเหลว", ok: "ตกลง",
     },
     login: { subtitle: "โมดูลรับสินค้า — เข้าสู่ระบบ", username: "รหัสพนักงาน", password: "รหัสผ่าน", signin: "เข้าสู่ระบบ", signingIn: "กำลังเข้าสู่ระบบ…" },
     receive: {
@@ -113,6 +117,7 @@ const T: Record<Lang, Translations> = {
       colId: "รหัสนำเข้า", colPartNo: "รหัสชิ้นส่วน", colPartName: "ชื่อชิ้นส่วน",
       colVendor: "รหัสผู้จัดจำหน่าย", colPo: "เลขที่ PO", colDate: "วันที่",
       colInvRcv: "ใบแจ้งหนี้ / รับแล้ว", colQty: "จำนวน", colActions: "จัดการ", rcv: "รับ:",
+      dupMerged: "รวมรายการซ้ำ",
     },
     parts: {
       title: "ชิ้นส่วน", searchPh: "รหัสชิ้นส่วน, ชื่อชิ้นส่วน…", criticalOnly: "วิกฤตเท่านั้น",
@@ -122,6 +127,7 @@ const T: Record<Lang, Translations> = {
       safety: "ขั้นต่ำ:", loc: "ที่เก็บ:",
       colPartNo: "รหัสชิ้นส่วน", colName: "ชื่อ", colDivision: "หน่วยงาน", colUnit: "หน่วย",
       colSafety: "สต็อกขั้นต่ำ", colOnHand: "คงเหลือ", colLocations: "ตำแหน่ง",
+      syncedParts: "ชิ้นส่วนที่ซิงค์", syncedLocations: "ตำแหน่งสต็อกที่ซิงค์",
     },
     iqc: { title: "คิว IQC", searchPh: "ค้นหาชิ้นส่วน, ใบแจ้งหนี้, ผู้จัดจำหน่าย…", noItems: "ไม่มีรายการรอตรวจสอบ IQC", nWaiting: (n) => `${n} รายการรอ`, pcs: "ชิ้น" },
     track: {
