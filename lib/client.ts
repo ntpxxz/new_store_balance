@@ -187,7 +187,7 @@ export const api = {
   getTask: (id: string) => req(`/api/inbound-tasks/${id}`) as Promise<Task>,
   getCounts: (dateFrom?: string, dateTo?: string) =>
     req(`/api/inbound-tasks/counts?${dateFrom ? `dateFrom=${dateFrom}&` : ""}${dateTo ? `dateTo=${dateTo}` : ""}`) as Promise<Record<string, number>>,
-  syncStock: () => req(`/api/parts/sync`, { method: "POST" }) as Promise<{ partCount: number; stockCount: number }>,
+  syncStock: () => req(`/api/parts/sync`, { method: "POST" }) as Promise<{ newCount: number; allCount: number }>,
   getPart: (id: string) => req(`/api/parts/${id}`) as Promise<PartDetail>,
   listParts: (search?: string) =>
     req(`/api/parts${search ? `?search=${encodeURIComponent(search)}` : ""}`) as Promise<Part[]>,

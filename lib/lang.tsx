@@ -21,7 +21,7 @@ export type Translations = {
     nParts: (n: number) => string; belowSafety: string; safety: string; loc: string;
     colPartNo: string; colName: string; colDivision: string; colUnit: string;
     colSafety: string; colOnHand: string; colLocations: string;
-    syncedParts: string; syncedLocations: string;
+    syncNew: string; syncAll: string;
   };
   iqc: { title: string; searchPh: string; noItems: string; nWaiting: (n: number) => string; pcs: string };
   track: {
@@ -74,7 +74,7 @@ const T: Record<Lang, Translations> = {
       safety: "Safety:", loc: "Loc:",
       colPartNo: "Part No.", colName: "Name", colDivision: "Division", colUnit: "Unit",
       colSafety: "Safety Stock", colOnHand: "On Hand", colLocations: "Locations",
-      syncedParts: "Parts synced", syncedLocations: "Stock locations synced",
+      syncNew: "New", syncAll: "All",
     },
     iqc: { title: "IQC Queue", searchPh: "Search part, invoice, vendor…", noItems: "No items waiting for IQC — all clear.", nWaiting: (n) => `${n} item${n !== 1 ? "s" : ""} waiting`, pcs: "pcs" },
     track: {
@@ -127,7 +127,7 @@ const T: Record<Lang, Translations> = {
       safety: "ขั้นต่ำ:", loc: "ที่เก็บ:",
       colPartNo: "รหัสชิ้นส่วน", colName: "ชื่อ", colDivision: "หน่วยงาน", colUnit: "หน่วย",
       colSafety: "สต็อกขั้นต่ำ", colOnHand: "คงเหลือ", colLocations: "ตำแหน่ง",
-      syncedParts: "ชิ้นส่วนที่ซิงค์", syncedLocations: "ตำแหน่งสต็อกที่ซิงค์",
+      syncNew: "ใหม่", syncAll: "ทั้งหมด",
     },
     iqc: { title: "คิว IQC", searchPh: "ค้นหาชิ้นส่วน, ใบแจ้งหนี้, ผู้จัดจำหน่าย…", noItems: "ไม่มีรายการรอตรวจสอบ IQC", nWaiting: (n) => `${n} รายการรอ`, pcs: "ชิ้น" },
     track: {

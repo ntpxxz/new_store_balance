@@ -12,13 +12,19 @@ export async function POST(request: NextRequest) {
   if ('error' in authResult) return createErrorResponse(authResult.error, authResult.status);
 
   try {
-    const [partCount, stockCount] = await Promise.all([
-      prisma.part.count(),
-      prisma.stock.count(),
+    // Both counts are distinct parts with stock on hand; "new" = stock updated today
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const inStock = { quantity: { gt: 0 } };
+    const [newParts, allParts] = await Promise.all([
+      prisma.stock.groupBy({ by: ['partId'], where: { ...inStock, updatedAt: { gte: startOfToday } } }),
+      prisma.stock.groupBy({ by: ['partId'], where: inStock }),
     ]);
+    const newCount = newParts.length;
+    const allCount = allParts.length;
 
-    logger.info({ partCount, stockCount }, 'Parts sync complete');
-    return createResponse({ partCount, stockCount });
+    logger.info({ newCount, allCount }, 'Parts sync complete');
+    return createResponse({ newCount, allCount });
   } catch (error: any) {
     logger.error({ err: error }, 'Parts sync error');
     captureException(error, { route: '/api/parts/sync' });

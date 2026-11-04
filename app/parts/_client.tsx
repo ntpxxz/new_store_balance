@@ -18,7 +18,7 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
   const [loadState, setLoadState] = useState<"idle" | "loading" | "ok" | "error">(initialParts ? "ok" : "idle");
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [syncInfo, setSyncInfo] = useState<{ partCount: number; stockCount: number } | null>(null);
+  const [syncInfo, setSyncInfo] = useState<{ newCount: number; allCount: number } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const load = useCallback(async () => {
     setLoadState("loading");
@@ -46,7 +46,7 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
     setSyncError(null);
     api.syncStock()
       .then((r) => {
-        setSyncInfo({ partCount: r.partCount, stockCount: r.stockCount });
+        setSyncInfo({ newCount: r.newCount, allCount: r.allCount });
         setSyncModal(true);
       })
       .catch((e: any) => {
@@ -177,12 +177,12 @@ export default function PartsClient({ initialParts }: { initialParts?: Part[] })
               {syncInfo ? (
                 <>
                   <div className="flex items-center justify-between text-sm">
-                    <span style={{ color: "var(--muted)" }}>{t.parts.syncedParts}</span>
-                    <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.partCount}</span>
+                    <span style={{ color: "var(--muted)" }}>{t.parts.syncNew}</span>
+                    <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.newCount}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span style={{ color: "var(--muted)" }}>{t.parts.syncedLocations}</span>
-                    <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.stockCount}</span>
+                    <span style={{ color: "var(--muted)" }}>{t.parts.syncAll}</span>
+                    <span className="font-bold text-lg" style={{ color: "var(--primary)" }}>{syncInfo.allCount}</span>
                   </div>
                 </>
               ) : (
