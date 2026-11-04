@@ -205,12 +205,10 @@ function ReceivePanel({ task, onDone }: { task: Task; onDone: () => void }) {
                 {L(`Enter one total count — compare against expected ${task.planQty}.`, `กรอกจำนวนรวม เทียบกับจำนวนตามแผน ${task.planQty}`)}
               </p>
             </button>
-            <button className="card p-4 text-left opacity-60 cursor-not-allowed"
+            <button className="card p-4 text-left hover:shadow-md transition-shadow"
               style={{ border: "1px solid var(--border)" }}
-              disabled title={L("Coming soon", "เร็ว ๆ นี้")}>
-              <div className="font-semibold">
-                {L("Count by box", "นับทีละกล่อง")} <span className="badge badge-muted ml-1">{L("Soon", "เร็ว ๆ นี้")}</span>
-              </div>
+              onClick={() => setMode("box")}>
+              <div className="font-semibold">{L("Count by box", "นับทีละกล่อง")}</div>
               <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                 {L(`Scan each box QR (1/n), count contents, sum must equal ${task.planQty}.`, `สแกน QR แต่ละกล่อง (1/n) นับของในกล่อง รวมต้องเท่ากับ ${task.planQty}`)}
               </p>
